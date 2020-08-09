@@ -2,3 +2,7 @@
 node_modules
 nohup.out
 *.pem
+*.cer
+keys
+*.p7b
+*.crt

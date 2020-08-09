@@ -1,4 +1,5 @@
 Sign up for SendGrid
+npm install --save @sendgrid/mail to install node modules
 Put API key into config.env as SENDGRID_API_KEY
 Set FORMPROCESSOR_PORT in config.env as well via exported env variable 
 Edit run.sh to pushd your deployment directory

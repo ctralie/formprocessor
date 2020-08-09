@@ -13,6 +13,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const options = {
 	key: fs.readFileSync('keys/selfsign/key.pem'),
+	//key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
 	cert: fs.readFileSync('keys/selfsign/cert.pem'),
  	//cert: fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),
 	//ca: [

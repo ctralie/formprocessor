@@ -5,12 +5,27 @@
 // 	npm install --save @sendgrid/mail 
 // 	API Key in SENDGRID_API_KEY environment variable
 
-const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const { parse } = require('querystring');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const server = http.createServer((req, res) => {
+const options = {
+	key: fs.readFileSync('key.pem'),
+	cert: fs.readFileSync('cert.pem'),
+	ciphers: [
+        "ECDHE-RSA-AES128-SHA256",
+        "DHE-RSA-AES128-SHA256",
+        "AES128-GCM-SHA256",
+        "RC4",
+        "HIGH",
+        "!MD5",
+        "!aNULL"
+    	].join(':'),
+};
+
+const server = https.createServer(options, (req, res) => {
 	res.setHeader('Access-Control-Allow-Origin', '*');
 
 	if(req.method === 'POST') {

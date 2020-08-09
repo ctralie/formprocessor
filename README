@@ -23,11 +23,15 @@ All form parameters will be emailed to facultyemail and studentemail
 
 For markdown/github pages clients, set the following:
 
-formprocessor: "http://192.204.148.92:8082/"
+formprocessor: "https://192.204.148.92:8082/"
 enctype: "application/x-www-form-urlencoded"
 facultyemail: "billmongan@gmail.com"
 
 in quiz.html/exercise.html in github pages 
 
 =====
-Assumes http not https, must be reached from http page if using http mode
+Must be reached from http page if using http mode
+Configured to use https by default, must generate a key as follows:
+openssl genrsa -out key.pem
+openssl req -new -key key.pem -out csr.pem
+openssl x509 -req -days 9999 -in csr.pem -signkey key.pem -out cert.pem

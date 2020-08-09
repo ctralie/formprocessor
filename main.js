@@ -15,8 +15,9 @@ const options = {
 	key: fs.readFileSync('keys/selfsign/key.pem'),
 	//key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
 	cert: fs.readFileSync('keys/selfsign/cert.pem'),
- 	//cert: fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),
+ 	//cert: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.cer'),
 	//ca: [
+	//	fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),      
 	//	fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-intermediates.cer'),
 	//	fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-bundle.cer')
 	//],

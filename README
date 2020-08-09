@@ -28,3 +28,6 @@ enctype: "application/x-www-form-urlencoded"
 facultyemail: "billmongan@gmail.com"
 
 in quiz.html/exercise.html in github pages 
+
+=====
+Assumes http not https, must be reached from http page if using http mode

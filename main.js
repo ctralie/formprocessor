@@ -12,15 +12,15 @@ const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const options = {
-	key: fs.readFileSync('keys/selfsign/key.pem'),
-	//key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
-	cert: fs.readFileSync('keys/selfsign/cert.pem'),
- 	//cert: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.cer'),
-	//ca: [
-	//	fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),      
-	//	fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-intermediates.cer'),
-	//	fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-bundle.cer')
-	//],
+	//key: fs.readFileSync('keys/selfsign/key.pem'),
+	key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
+	//cert: fs.readFileSync('keys/selfsign/cert.pem'),
+ 	cert: fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),
+	ca: [
+		fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),      
+		fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-intermediates.cer'),
+		fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-bundle.cer')
+	],
 	ciphers: [
         "ECDHE-RSA-AES128-SHA256",
         "DHE-RSA-AES128-SHA256",

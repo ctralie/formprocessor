@@ -1,9 +1,9 @@
 // https://itnext.io/how-to-handle-the-post-request-body-in-node-js-without-using-a-framework-cd2038b93190
 // https://www.w3schools.com/nodejs/nodejs_email.asp
 // SendGrid:
-// 	https://app.sendgrid.com/guide/integrate/langs/nodejs
-// 	npm install --save @sendgrid/mail 
-// 	API Key in SENDGRID_API_KEY environment variable
+//     https://app.sendgrid.com/guide/integrate/langs/nodejs
+//     npm install --save @sendgrid/mail 
+//     API Key in SENDGRID_API_KEY environment variable
 
 // Setup dependencies
 const https = require('https');
@@ -95,14 +95,14 @@ function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheade
 
 
 let httpsOptions = {
-	key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
- 	cert: fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),
-	ca: [
-		fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),      
-		fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-intermediates.cer'),
-		fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-bundle.cer')
-	],
-	ciphers: [
+    key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
+     cert: fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),
+    ca: [
+        fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),      
+        fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-intermediates.cer'),
+        fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-bundle.cer')
+    ],
+    ciphers: [
         "ECDHE-RSA-AES128-SHA256",
         "DHE-RSA-AES128-SHA256",
         "AES128-GCM-SHA256",
@@ -110,122 +110,122 @@ let httpsOptions = {
         "HIGH",
         "!MD5",
         "!aNULL"
-    	].join(':'),
+        ].join(':'),
 };
 
 const serverHandler = (req, res) => {
-	res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', '*');
 
-	if(req.method === 'POST') {
-		let body = '';
-		req.on('data', chunk => {
-			body += chunk.toString();
-		});
+    if(req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
 
-		req.on('end', () => {
-			const parsedjsonobj = parse(body)
-			console.log(parsedjsonobj);
+        req.on('end', () => {
+            const parsedjsonobj = parse(body)
+            console.log(parsedjsonobj);
 
-			let unpackedjson = '';
-			for(var key in parsedjsonobj) {
-				unpackedjson += "*** " + key + " ***<br>" + parsedjsonobj[key] + "<br><br>";
-			}
+            let unpackedjson = '';
+            for(var key in parsedjsonobj) {
+                unpackedjson += "*** " + key + " ***<br>" + parsedjsonobj[key] + "<br><br>";
+            }
 
-			unpackedjson = unpackedjson.replace(/\r\n/g, '\n');
-			unpackedjson = unpackedjson.replace(/\r/g, '\n');
-			unpackedjson = unpackedjson.replace(/\n/g, '<br>');
-			unpackedjson = unpackedjson.replace(/ /g, '&nbsp;');
-			unpackedjson = unpackedjson.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+            unpackedjson = unpackedjson.replace(/\r\n/g, '\n');
+            unpackedjson = unpackedjson.replace(/\r/g, '\n');
+            unpackedjson = unpackedjson.replace(/\n/g, '<br>');
+            unpackedjson = unpackedjson.replace(/ /g, '&nbsp;');
+            unpackedjson = unpackedjson.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
 
-			if(! ('facultyemail' in parsedjsonobj && 'studentnetid' in parsedjsonobj && 'title' in parsedjsonobj)) {
-				res.end('fail (required form keys: facultyemail, studentnetid, title)');
-			} else {
-				if(!('magic' in parsedjsonobj) || (parsedjsonobj['magic'] != 'ursinus')) {
-					res.end('fail (authentication)')
-				} else {
-				    let netid = parsedjsonobj['studentnetid'];
-					facultyemail = parsedjsonobj['facultyemail'];
-					studentemail = netid + "@ursinus.edu";
-					title = parsedjsonobj['title'];
+            if(! ('facultyemail' in parsedjsonobj && 'studentnetid' in parsedjsonobj && 'title' in parsedjsonobj)) {
+                res.end('fail (required form keys: facultyemail, studentnetid, title)');
+            } else {
+                if(!('magic' in parsedjsonobj) || (parsedjsonobj['magic'] != 'ursinus')) {
+                    res.end('fail (authentication)')
+                } else {
+                    let netid = parsedjsonobj['studentnetid'];
+                    facultyemail = parsedjsonobj['facultyemail'];
+                    studentemail = netid + "@ursinus.edu";
+                    title = parsedjsonobj['title'];
                     let msg = {};
                     // If half credit, only e-mail the faculty member
                     if ('canvashalfcredit' in parsedjsonobj) {
-					    msg = {
-						    to: facultyemail,
-						    from: facultyemail,
-						    subject: title + ': Form Processor Submission (Half Credit)',
-						    text: unpackedjson,
-						    html: unpackedjson
-					    };  
+                        msg = {
+                            to: facultyemail,
+                            from: facultyemail,
+                            subject: title + ': Form Processor Submission (Half Credit)',
+                            text: unpackedjson,
+                            html: unpackedjson
+                        };  
                     }
                     // Otherwise, e-mail the student and the faculty member
                     else {
-					    msg = {
-						    to: studentemail,
-						    cc: facultyemail,
-						    from: facultyemail,
-						    subject: title + ': Form Processor Submission',
-						    text: unpackedjson,
-						    html: unpackedjson
-					    };                    
+                        msg = {
+                            to: studentemail,
+                            cc: facultyemail,
+                            from: facultyemail,
+                            subject: title + ': Form Processor Submission',
+                            text: unpackedjson,
+                            html: unpackedjson
+                        };                    
                     }
 
                     // Send email
-					sgMail.send(msg).then(() => {
-						let logprint = "Message sent to " + msg.to;
-						if ('cc' in msg) {
-						    logprint += " and CCed to " + msg['cc'];
-						}
-						console.log(logprint);
-					}).catch((error) => {
-    						console.log(error.response.body);
-					});
-					// Post to canvas
-					if (FORMPROCESSOR_POST_TO_CANVAS) {
-					    if ('canvasasmtid' in parsedjsonobj) {
-					        let asmtid = parsedjsonobj['canvasasmtid'];
-					        let canvaspoints = 2.0;
-					        if ('canvaspoints' in parsedjsonobj) {
-					            canvaspoints = parseFloat(parsedjsonobj['canvaspoints']);
-					        }
-					        else {
-					            console.log("Warning: Requesting canvas post, but canvaspoints field was not supplied");
-					        }
-					        if ('canvashalfcredit' in parsedjsonobj) {
-					            canvaspoints = canvaspoints / 2;
-					        }
-					        if (netid in CANVAS_STUDENTS) {
-					            let user_id = CANVAS_STUDENTS[netid];
-					            httprequestCanvas("/api/v1/courses/"+CANVAS_COURSE_ID+"/assignments/" + asmtid + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
-					        }
+                    sgMail.send(msg).then(() => {
+                        let logprint = "Message sent to " + msg.to;
+                        if ('cc' in msg) {
+                            logprint += " and CCed to " + msg['cc'];
+                        }
+                        console.log(logprint);
+                    }).catch((error) => {
+                            console.log(error.response.body);
+                    });
+                    // Post to canvas
+                    if (FORMPROCESSOR_POST_TO_CANVAS) {
+                        if ('canvasasmtid' in parsedjsonobj) {
+                            let asmtid = parsedjsonobj['canvasasmtid'];
+                            let canvaspoints = 2.0;
+                            if ('canvaspoints' in parsedjsonobj) {
+                                canvaspoints = parseFloat(parsedjsonobj['canvaspoints']);
+                            }
+                            else {
+                                console.log("Warning: Requesting canvas post, but canvaspoints field was not supplied");
+                            }
+                            if ('canvashalfcredit' in parsedjsonobj) {
+                                canvaspoints = canvaspoints / 2;
+                            }
+                            if (netid in CANVAS_STUDENTS) {
+                                let user_id = CANVAS_STUDENTS[netid];
+                                httprequestCanvas("/api/v1/courses/"+CANVAS_COURSE_ID+"/assignments/" + asmtid + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
+                            }
 
-					    }
-					    else {
-					        console.log("Warning: Requesting canvas post, but canvasasmtid field was not supplied");
-					    }
-					}
+                        }
+                        else {
+                            console.log("Warning: Requesting canvas post, but canvasasmtid field was not supplied");
+                        }
+                    }
 
-					res.end('ok (input below)\n\n' + unpackedjson);
-				}
-			}
-		});
-	} else {
-		res.end(`
-			<!doctype html>
-			<html>
-			<body>
-				Please submit a form via POST.
-				<!--
-				<form action="/" method="post">
-					Test: <input type="text" name="test" /><br />
-					Test2: <input type="text" name="test2" /></br />
-					<input type="submit" name="submit" value="Submit" />
-				</form>
-				-->
-			</body>
-			</html>
-		`);
-	} 
+                    res.end('ok (input below)\n\n' + unpackedjson);
+                }
+            }
+        });
+    } else {
+        res.end(`
+            <!doctype html>
+            <html>
+            <body>
+                Please submit a form via POST.
+                <!--
+                <form action="/" method="post">
+                    Test: <input type="text" name="test" /><br />
+                    Test2: <input type="text" name="test2" /></br />
+                    <input type="submit" name="submit" value="Submit" />
+                </form>
+                -->
+            </body>
+            </html>
+        `);
+    } 
 };
 
 let server = null;

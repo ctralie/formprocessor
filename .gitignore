@@ -6,3 +6,4 @@ nohup.out
 keys
 *.p7b
 *.crt
+config.json

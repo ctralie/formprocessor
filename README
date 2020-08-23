@@ -4,13 +4,15 @@
 * Put API key into config.json as SENDGRID_API_KEY
 * Set FORMPROCESSOR_PORT in config.json
 * Edit run.sh to pushd your deployment directory
+* Set COURSEWD to working directory in config.env
+* Set FORMPROCESSOR_USE_HTTPS in config.json ({ constants: { ... })
 
 If using canvas
 * Set the field FORMPROCESSOR_POST_TO_CANVAS to be true in config.json
 * Generate canvas API key at https://ursinus.instructure.com/profile/settings and place in field CANVAS_API_KEY in config.json
 * Set CANVAS_COURSE_ID in config.json to be the course ID (can obtain from the Canvas URL)
 * Set the CANVAS_HOST in canvas.json to be "ursinus.instructure.com"
-* Create a dictionary "CANVAS_SIS_NETIDS" in config.son which is {"sis id":"netid"}.  You can obtain this information from the roster on Grizzly Gateway
+* Create a dictionary "CANVAS_SIS_NETIDS" in config.json which is {"sis id":"netid"}.  You can obtain this information from the roster on Grizzly Gateway
 * Run a file to obtain the internal IDs of each student to use on canvas
 node studentids.js
 
@@ -19,6 +21,9 @@ node studentids.js
 
 To run the server on startup, add something like this to /etc/rc.local:
 sudo -i -u wmongan /home/wmongan/opt/formprocessor/run.sh
+
+or to crontab
+@reboot /home/wmongan/opt/formprocessor/run.sh
 
 SendGrid requires validating your email address as a sender on their dashboard (on the left menu to validate)
 

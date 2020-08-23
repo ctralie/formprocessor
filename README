@@ -5,7 +5,7 @@
 * Set FORMPROCESSOR_PORT in config.json
 * Edit run.sh to pushd your deployment directory
 * Set COURSEWD to working directory in config.env
-* Set FORMPROCESSOR_USE_HTTPS in config.json ({ constants: { ... })
+* Set FORMPROCESSOR_USE_HTTPS in config.json ({ key: val, ... })
 
 If using canvas
 * Set the field FORMPROCESSOR_POST_TO_CANVAS to be true in config.json

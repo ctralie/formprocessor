@@ -1,5 +1,5 @@
 #!/bin/bash
 
-pushd /home/ctralie/opt/formprocessor
-export COURSEWD="/home/ctralie/opt/formprocessor/"
+pushd /home/wmongan/opt/formprocessor
+source config.env
 nohup node main.js &

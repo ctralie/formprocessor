@@ -1,10 +1,20 @@
-Sign up for SendGrid
-npm install --save @sendgrid/mail to install node modules
-Put API key into config.env as SENDGRID_API_KEY
-Set FORMPROCESSOR_PORT in config.env as well via exported env variable 
-Edit run.sh to pushd your deployment directory
+## Getting Started
+* Sign up for SendGrid
+* npm install --save @sendgrid/mail to install node modules
+* Put API key into config.json as SENDGRID_API_KEY
+* Set FORMPROCESSOR_PORT in config.json
+* Edit run.sh to pushd your deployment directory
 
-Then Run:
+If using canvas
+* Set the field FORMPROCESSOR_POST_TO_CANVAS to be true in config.json
+* Generate canvas API key at https://ursinus.instructure.com/profile/settings and place in field CANVAS_API_KEY in config.json
+* Set CANVAS_COURSE_ID in config.json to be the course ID (can obtain from the Canvas URL)
+* Set the CANVAS_HOST in canvas.json to be "ursinus.instructure.com"
+* Create a dictionary "CANVAS_SIS_NETIDS" in config.son which is {"sis id":"netid"}.  You can obtain this information from the roster on Grizzly Gateway
+* Run a file to obtain the internal IDs of each student to use on canvas
+node studentids.js
+
+* Finally, to start the server, run:
 ./run.sh
 
 To run the server on startup, add something like this to /etc/rc.local:
@@ -13,10 +23,15 @@ sudo -i -u wmongan /home/wmongan/opt/formprocessor/run.sh
 SendGrid requires validating your email address as a sender on their dashboard (on the left menu to validate)
 
 HTML forms must contain:
-studentemail
+studentnetid
 facultyemail
 title
 magic = ursinus
+
+HTML forms optinally contain:
+canvasasmtid
+canvaspoints
+canvashalfcredit
 
 All form parameters will be emailed to facultyemail and studentemail
 
@@ -29,6 +44,11 @@ enctype: "application/x-www-form-urlencoded"
 facultyemail: "billmongan@gmail.com"
 
 in quiz.html/exercise.html in github pages 
+
+if using canvas, also set the following:
+canvasasmtid: "canvas course ID"
+canvaspoints: "number of points this exercise is worth"
+canvashalftries: Number of attempts until half credit (optional)
 
 =====
 Must be reached from http page if using http mode

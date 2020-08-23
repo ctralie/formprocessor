@@ -5,20 +5,29 @@
 // 	npm install --save @sendgrid/mail 
 // 	API Key in SENDGRID_API_KEY environment variable
 
+// Setup dependencies
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const { parse } = require('querystring');
 const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Extract constants from environmental variables
-const FORMPROCESSOR_USE_HTTPS = (process.env.FORMPROCESSOR_USE_HTTPS == 1);
-const FORMPROCESSOR_POST_TO_CANVAS = (process.env.FORMPROCESSOR_POST_TO_CANVAS == 1);
-const CANVAS_API_KEY = process.env.CANVAS_API_KEY;
-const CANVAS_COURSE_ID = process.env.CANVAS_COURSE_ID;
-const CANVAS_HOST = process.env.CANVAS_HOST;
 
+// Load in constants
+const constants = JSON.parse(fs.readFileSync(process.env.COURSEWD + "config.json"));
+sgMail.setApiKey(constants["SENDGRID_API_KEY"]);
+const FORMPROCESSOR_PORT = constants["FORMPROCESSOR_PORT"];
+const FORMPROCESSOR_USE_HTTPS = constants["FORMPROCESSOR_USE_HTTPS"];
+const FORMPROCESSOR_POST_TO_CANVAS = constants["FORMPROCESSOR_POST_TO_CANVAS"];;
+const CANVAS_API_KEY = constants["CANVAS_API_KEY"];
+const CANVAS_COURSE_ID = constants["CANVAS_COURSE_ID"];
+const CANVAS_HOST = constants["CANVAS_HOST"];
+const CANVAS_STUDENTS = constants["CANVAS_STUDENTS"];
+
+
+function printResp(resp) {
+    console.log(resp);
+}
 
 
 /**
@@ -128,30 +137,73 @@ const serverHandler = (req, res) => {
 			unpackedjson = unpackedjson.replace(/ /g, '&nbsp;');
 			unpackedjson = unpackedjson.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
 
-			if(! ('facultyemail' in parsedjsonobj && 'studentemail' in parsedjsonobj && 'title' in parsedjsonobj)) {
-				res.end('fail (required form keys: facultyemail, studentemail, title)');
+			if(! ('facultyemail' in parsedjsonobj && 'studentnetid' in parsedjsonobj && 'title' in parsedjsonobj)) {
+				res.end('fail (required form keys: facultyemail, studentnetid, title)');
 			} else {
 				if(!('magic' in parsedjsonobj) || (parsedjsonobj['magic'] != 'ursinus')) {
 					res.end('fail (authentication)')
 				} else {
+				    let netid = parsedjsonobj['studentnetid'];
 					facultyemail = parsedjsonobj['facultyemail'];
-					studentemail = parsedjsonobj['studentemail'];
+					studentemail = netid + "@ursinus.edu";
 					title = parsedjsonobj['title'];
+                    let msg = {};
+                    // If half credit, only e-mail the faculty member
+                    if ('canvashalfcredit' in parsedjsonobj) {
+					    msg = {
+						    to: facultyemail,
+						    from: facultyemail,
+						    subject: title + ': Form Processor Submission (Half Credit)',
+						    text: unpackedjson,
+						    html: unpackedjson
+					    };  
+                    }
+                    // Otherwise, e-mail the student and the faculty member
+                    else {
+					    msg = {
+						    to: studentemail,
+						    cc: facultyemail,
+						    from: facultyemail,
+						    subject: title + ': Form Processor Submission',
+						    text: unpackedjson,
+						    html: unpackedjson
+					    };                    
+                    }
 
-					const msg = {
-						to: studentemail,
-						cc: facultyemail,
-						from: facultyemail,
-						subject: title + ': Form Processor Submission',
-						text: unpackedjson,
-						html: unpackedjson
-					};
-
+                    // Send email
 					sgMail.send(msg).then(() => {
-						console.log('Message sent')
+						let logprint = "Message sent to " + msg.to;
+						if ('cc' in msg) {
+						    logprint += " and CCed to " + msg['cc'];
+						}
+						console.log(logprint);
 					}).catch((error) => {
-    						console.log(error.response.body)
+    						console.log(error.response.body);
 					});
+					// Post to canvas
+					if (FORMPROCESSOR_POST_TO_CANVAS) {
+					    if ('canvasasmtid' in parsedjsonobj) {
+					        let asmtid = parsedjsonobj['canvasasmtid'];
+					        let canvaspoints = 2.0;
+					        if ('canvaspoints' in parsedjsonobj) {
+					            canvaspoints = parseFloat(parsedjsonobj['canvaspoints']);
+					        }
+					        else {
+					            console.log("Warning: Requesting canvas post, but canvaspoints field was not supplied");
+					        }
+					        if ('canvashalfcredit' in parsedjsonobj) {
+					            canvaspoints = canvaspoints / 2;
+					        }
+					        if (netid in CANVAS_STUDENTS) {
+					            let user_id = CANVAS_STUDENTS[netid];
+					            httprequestCanvas("/api/v1/courses/"+CANVAS_COURSE_ID+"/assignments/" + asmtid + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
+					        }
+
+					    }
+					    else {
+					        console.log("Warning: Requesting canvas post, but canvasasmtid field was not supplied");
+					    }
+					}
 
 					res.end('ok (input below)\n\n' + unpackedjson);
 				}
@@ -184,4 +236,4 @@ else {
     server = http.createServer(serverHandler);
 }
 
-server.listen(parseInt(process.env.FORMPROCESSOR_PORT));
+server.listen(FORMPROCESSOR_PORT);

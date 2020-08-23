@@ -4,7 +4,7 @@
 * Put API key into config.json as SENDGRID_API_KEY
 * Set FORMPROCESSOR_PORT in config.json
 * Edit run.sh to pushd your deployment directory
-* Set COURSEWD to working directory in config.env
+* Set COURSEWD to working directory (with a trailing slash) in config.env
 * Set FORMPROCESSOR_USE_HTTPS in config.json ({ constants: { ... })
 
 If using canvas

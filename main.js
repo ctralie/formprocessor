@@ -6,15 +6,87 @@
 // 	API Key in SENDGRID_API_KEY environment variable
 
 const https = require('https');
+const http = require('http');
 const fs = require('fs');
 const { parse } = require('querystring');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const options = {
-	//key: fs.readFileSync('keys/selfsign/key.pem'),
+// Extract constants from environmental variables
+const FORMPROCESSOR_USE_HTTPS = (process.env.FORMPROCESSOR_USE_HTTPS == 1);
+const FORMPROCESSOR_POST_TO_CANVAS = (process.env.FORMPROCESSOR_POST_TO_CANVAS == 1);
+const CANVAS_API_KEY = process.env.CANVAS_API_KEY;
+const CANVAS_COURSE_ID = process.env.CANVAS_COURSE_ID;
+const CANVAS_HOST = process.env.CANVAS_HOST;
+
+
+
+/**
+ * An http request handler for Canvas, implemented with help from
+ * https://flaviocopes.com/node-http-post/
+ * 
+ * @param {string} path Relative path for canvas request
+ * @param {int} port Port to use
+ * @param {string} method GET/POST/PUT
+ * @param {string} body Body data to post 
+ * @param {string} bodyheaders Body headers
+ * @param {function} nextstep A function to execute on the response object once this request is complete
+ */
+function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheaders={}, nextstep=null) {
+    const https = require('https')
+
+    var reqheaders = {}
+
+    if(body.length > 0) {
+        reqheaders['Content-Type'] = 'application/json';
+        reqheaders['Content-Length'] = body.length;    
+    }
+
+    for(var key in bodyheaders) {
+        reqheaders[key] = bodyheaders[key]
+    }
+
+    const options = {
+        hostname: CANVAS_HOST,
+        port: port,
+        path: path,
+        method: method,
+        headers: reqheaders
+    }
+
+    var resp = "";
+
+    const req = https.request(options, (res) => {
+        console.log(`statusCode: ${res.statusCode}`)
+
+        res.on('data', (d) => {
+            resp += d.toString();
+        })
+
+        res.on('end', () => {
+            var respobj = JSON.parse(resp);
+            //process.stdout.write(resp);
+            //console.log(res.headers);
+            if(nextstep) {
+                nextstep(respobj);
+            }
+        })
+    });
+
+    req.on('error', (error) => {
+        console.error(error);
+    })
+
+    if(body.length > 0) {
+        req.write(JSON.stringify(body));
+    }
+
+    req.end();
+}
+
+
+let httpsOptions = {
 	key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
-	//cert: fs.readFileSync('keys/selfsign/cert.pem'),
  	cert: fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),
 	ca: [
 		fs.readFileSync('keys/mathcs-ursinus/mathcs-ursinus-cert.cer'),      
@@ -32,7 +104,7 @@ const options = {
     	].join(':'),
 };
 
-const server = https.createServer(options, (req, res) => {
+const serverHandler = (req, res) => {
 	res.setHeader('Access-Control-Allow-Origin', '*');
 
 	if(req.method === 'POST') {
@@ -102,7 +174,14 @@ const server = https.createServer(options, (req, res) => {
 			</html>
 		`);
 	} 
-});
+};
 
+let server = null;
+if (FORMPROCESSOR_USE_HTTPS) {
+    server = https.createServer(httpsOptions, serverHandler);
+}
+else {
+    server = http.createServer(serverHandler);
+}
 
 server.listen(parseInt(process.env.FORMPROCESSOR_PORT));

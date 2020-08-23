@@ -4,7 +4,7 @@
 * Put API key into config.json as SENDGRID_API_KEY
 * Set FORMPROCESSOR_PORT in config.json
 * Edit run.sh to pushd your deployment directory
-* Set COURSEWD to working directory in config.env
+* Set COURSEWD to working directory (with a trailing slash) in config.env
 * Set FORMPROCESSOR_USE_HTTPS in config.json ({ key: val, ... })
 
 If using canvas
@@ -62,3 +62,4 @@ openssl genrsa -out key.pem
 openssl req -new -key key.pem -out csr.pem
 openssl x509 -req -days 9999 -in csr.pem -signkey key.pem -out cert.pem
 Set key/cert paths in main.js to these files in options variable that is passed to createServer
+

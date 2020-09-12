@@ -175,32 +175,31 @@ function sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson) {
 }
 
 function sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson) {
-    const mailjet = require('node-mailjet');
-    mailjet.connect(constants["MAILJET_API_KEY"].key, constants["MAILJET_API_KEY"].secret);
+    const mailjet = require('node-mailjet').connect(constants["MAILJET_API_KEY"].key, constants["MAILJET_API_KEY"].secret);
        
     // If half credit, only e-mail the faculty member
     if ('canvashalfcredit' in parsedjsonobj) {
         const request = mailjet
-        .post("send", {'version': 'v3.1'})
-        .request({
-          "Messages":[
-            {
-              "From": {
-                "Email": facultyemail,
-                "Name": facultyemail
-              },
-              "To": [
+            .post("send", {'version': 'v3.1'})
+            .request({
+              "Messages":[
                 {
-                  "Email": facultyemail,
-                  "Name": facultyemail
+                  "From": {
+                    "Email": facultyemail,
+                    "Name": facultyemail
+                  },
+                  "To": [
+                    {
+                      "Email": facultyemail,
+                      "Name": facultyemail
+                    }
+                  ],             
+                  "Subject": title + ': Form Processor Submission (Half Credit)',
+                  "TextPart": unpackedjson,
+                  "HTMLPart": unpackedjson
                 }
-              ],             
-              "Subject": title + ': Form Processor Submission (Half Credit)',
-              "TextPart": unpackedjson,
-              "HTMLPart": unpackedjson
-            }
-          ]
-        })
+              ]
+            })
         request
           .then((result) => {
             let logprint = "Message sent via MailJet to " + facultyemail;
@@ -214,32 +213,32 @@ function sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson) {
     // Otherwise, e-mail the student and the faculty member
     else {
         const request = mailjet
-        .post("send", {'version': 'v3.1'})
-        .request({
-          "Messages":[
-            {
-              "From": {
-                "Email": facultyemail,
-                "Name": facultyemail
-              },
-              "To": [
+            .post("send", {'version': 'v3.1'})
+            .request({
+              "Messages":[
                 {
-                  "Email": studentemail,
-                  "Name": studentemail
+                  "From": {
+                    "Email": facultyemail,
+                    "Name": facultyemail
+                  },
+                  "To": [
+                    {
+                      "Email": studentemail,
+                      "Name": studentemail
+                    }
+                  ],
+                  "Cc": [
+                    {
+                      "Email": facultyemail,
+                      "Name": facultyemail
+                    }
+                  ],               
+                  "Subject": title + ': Form Processor Submission',
+                  "TextPart": unpackedjson,
+                  "HTMLPart": unpackedjson
                 }
-              ],
-              "Cc": [
-                {
-                  "Email": facultyemail,
-                  "Name": facultyemail
-                }
-              ],               
-              "Subject": title + ': Form Processor Submission',
-              "TextPart": unpackedjson,
-              "HTMLPart": unpackedjson
-            }
-          ]
-        })
+              ]
+            })
         request
           .then((result) => {
             let logprint = "Message sent via MailJet to " + studentemail;

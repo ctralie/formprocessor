@@ -13,8 +13,8 @@
 ** npm install node-mailjet
 * Put API key into config.json as one of the following:
 ** SENDGRID_API_KEY (string)
-** SOCKETLABS_API_KEY ({ "key": "", "server_id": "" })
-** MAILJET_API_KEY ({ "key": "", "secret": "" })
+** SOCKETLABS_API_KEY ({ "key": string, "server_id": numeric })
+** MAILJET_API_KEY ({ "key": string, "secret": string })
 
 * Set FORMPROCESSOR_PORT in config.json
 * Edit run.sh to pushd your deployment directory

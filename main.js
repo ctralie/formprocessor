@@ -177,12 +177,12 @@ function sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson) {
 function sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson) {
     const mailjet = require('node-mailjet');
     mailjet.connect(constants["MAILJET_API_KEY"].key, constants["MAILJET_API_KEY"].secret);
-    
-    const request = mailjet;
-    
+       
     // If half credit, only e-mail the faculty member
     if ('canvashalfcredit' in parsedjsonobj) {
-        request.post("send", {'version': 'v3.1'}).request({
+        const request = mailjet
+        .post("send", {'version': 'v3.1'})
+        .request({
           "Messages":[
             {
               "From": {
@@ -213,7 +213,9 @@ function sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson) {
     } 
     // Otherwise, e-mail the student and the faculty member
     else {
-        request.post("send", {'version': 'v3.1'}).request({
+        const request = mailjet
+        .post("send", {'version': 'v3.1'})
+        .request({
           "Messages":[
             {
               "From": {

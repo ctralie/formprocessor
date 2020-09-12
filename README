@@ -1,7 +1,21 @@
 ## Getting Started
-* Sign up for SendGrid
-* npm install --save @sendgrid/mail to install node modules
-* Put API key into config.json as SENDGRID_API_KEY
+* Sign up for SendGrid, MailJet, or SocketLabs
+* SendGrid:
+** https://app.sendgrid.com/guide/integrate/langs/nodejs
+** npm install --save @sendgrid/mail 
+** API Key in SENDGRID_API_KEY config.json variable
+* SocketLabs:
+** https://www.socketlabs.com/send-email-nodejs/
+** API Key in SOCKETLABS_API_KEY config.json variable
+* MailJet:
+** API Key in MAILJET_API_KEY config.json variable
+** https://app.mailjet.com/auth/get_started/developer
+** npm install node-mailjet
+* Put API key into config.json as one of the following:
+** SENDGRID_API_KEY (string)
+** SOCKETLABS_API_KEY ({ "key": "", "server_id": "" })
+** MAILJET_API_KEY ({ "key": "", "secret": "" })
+
 * Set FORMPROCESSOR_PORT in config.json
 * Edit run.sh to pushd your deployment directory
 * Set COURSEWD to working directory (with a trailing slash) in config.env

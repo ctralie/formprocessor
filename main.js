@@ -27,6 +27,7 @@ const CANVAS_API_KEY = constants["CANVAS_API_KEY"];
 const CANVAS_COURSE_ID = constants["CANVAS_COURSE_ID"];
 const CANVAS_HOST = constants["CANVAS_HOST"];
 const CANVAS_STUDENTS = constants["CANVAS_STUDENTS"];
+const CANVAS_NETIDS = constants["CANVAS_NETIDS"];
 
 function printResp(resp) {
     console.log(resp);
@@ -332,9 +333,27 @@ const serverHandler = (req, res) => {
                             if ('canvashalfcredit' in parsedjsonobj) {
                                 canvaspoints = canvaspoints / 2;
                             }
-                            if (netid in CANVAS_STUDENTS) {
-                                let user_id = CANVAS_STUDENTS[netid];
-                                httprequestCanvas("/api/v1/courses/"+CANVAS_COURSE_ID+"/assignments/" + asmtid + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
+                            for (i = 0; i < CANVAS_STUDENTS.length; i++) { // for multiple sections
+                                let user_id = ''; // find netid in this section of enrollments, or empty if not found
+                                
+                                for(canvasuserid in CANVAS_STUDENTS[i]) {
+                                    sisid = CANVAS_STUDENTS[i][canvasuserid];
+                                    
+                                    for(sisidkey in CANVAS_NETIDS) {
+                                        if(sisid === sisidkey && CANVAS_NETIDS[sisidkey] === netid) {
+                                            user_id = canvasuserid;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if(user_id.length > 0) {
+                                        break;
+                                    }
+                                }
+                                
+                                if (user_id.length > 0) {
+                                    httprequestCanvas("/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
+                                }
                             }
 
                         }

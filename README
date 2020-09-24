@@ -24,11 +24,12 @@
 If using canvas
 * Set the field FORMPROCESSOR_POST_TO_CANVAS to be true in config.json
 * Generate canvas API key at https://ursinus.instructure.com/profile/settings and place in field CANVAS_API_KEY in config.json
-* Set CANVAS_COURSE_ID in config.json to be the course ID (can obtain from the Canvas URL)
+* Set CANVAS_COURSE_ID in config.json to be an array of course ID's (can obtain from the Canvas URL)
 * Set the CANVAS_HOST in canvas.json to be "ursinus.instructure.com"
-* Create a dictionary "CANVAS_SIS_NETIDS" in config.json which is {"sis id":"netid"}.  You can obtain this information from the roster on Grizzly Gateway
+* Create an array of dictionary structures (one per section) "CANVAS_STUDENTS" in config.json which is {"userid":"sisid"}.  You can obtain this information from the roster on Grizzly Gateway
 * Run a file to obtain the internal IDs of each student to use on canvas
-node studentids.js
+node studentids_array.js
+* Set CANVAS_NETIDS to a dictionary of userid: netid, from the Grizzly Gateway student roster {"sisid": "netid"}
 
 * Finally, to start the server, run:
 ./run.sh

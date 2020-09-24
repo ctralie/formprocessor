@@ -1,11 +1,10 @@
 /**
  * A file to pull the student IDs from a course specified in config.js, and
- * to add a dictionary "CANVAS_STUDENTS" of {netid:user_id} to config.js.
+ * to add a dictionary "CANVAS_STUDENTS" of {netid:user_id} to the console.
  * The following fields are expected in config.js:
- *    CANVAS_COURSE_ID The ID of your course (can be found in Canvas URL of course)
+ *    CANVAS_COURSE_ID An array of ID's of your course (can be found in Canvas URL of course)
  *    CANVAS_API_KEY: Generate this at https://ursinus.instructure.com/profile/settings
  *    CANVAS_HOST: "ursinus.instructure.com"
- *    CANVAS_NETIDS: A dictionary of {"sis id" (can be found on Grizzly gateway) : "netid"}
  */
 
 const fs = require('fs');
@@ -89,35 +88,41 @@ function printStudents(resp) {
  * Create a dictionary of student user IDs from a dictionary of SIS IDs
  * 
  * @param {list} students A list of students returned by the canvas API
- * @param {object} students_sis A dictionary from the student SIS ID to the netid
  */
-function getStudentUserIDsDict(students, students_sis) {
+function getStudentUserIDsDict(students) {
   students_user_id = {};
   for (let student of students) {
-    let netid = students_sis[student['sis_user_id']];
-    students_user_id[netid] = student['user_id'];
+    let userid = student['user_id'];
+    let sisid = student['sis_user_id'];
+    let courseid = student['course_id'];
+    
+    students_user_id[userid] = sisid;
   }
+  
   return students_user_id;
 }
 
 /**
- * Convert from {sis_id:netid} to {netid:user_id} and save to config.json
+ * Convert from {sis_id:netid} to {netid:user_id} and output to the console
  */
 function makeStudentDict() {
-    if ("CANVAS_SIS_NETIDS" in constants) {
-      const students_sis = constants["CANVAS_SIS_NETIDS"];
+    let canvas_students_lists = [];
+    
+    for (i = 0; i < COURSEID.length; i++) { // for multiple sections
+      canvas_students_list = {};
+      
+      //console.log(COURSEID[i]);
+      
       httprequestCanvas(
-        "/api/v1/courses/"+COURSEID+"/enrollments?per_page=100", 443, "GET", "", {"Authorization": "Bearer " + APIKEY}, 
+        "/api/v1/courses/"+COURSEID[i]+"/enrollments?per_page=100&include[]=email", 443, "GET", "", {"Authorization": "Bearer " + APIKEY}, 
         function(resp){
-          let students_user_id = getStudentUserIDsDict(resp, students_sis);
+          //console.log(resp);
+          let students_user_id = getStudentUserIDsDict(resp, COURSEID[i]);
           const CANVAS_STUDENTS = students_user_id;
           console.log(CANVAS_STUDENTS);
-          constants["CANVAS_STUDENTS"] = CANVAS_STUDENTS;
-          fs.writeFileSync("config.json", JSON.stringify(constants), 'utf8');
         }
-      );
+      );      
     }
-
 }
 
 makeStudentDict();

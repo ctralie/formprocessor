@@ -341,13 +341,13 @@ const serverHandler = (req, res) => {
                                 for(canvasuserid in CANVAS_STUDENTS[i]) {
                                     sisid = CANVAS_STUDENTS[i][canvasuserid];
                                    
-			    	    //console.log(sisid + " " + canvasuserid);
+                                    //console.log(sisid + " " + canvasuserid);
                                     for(sisidkey in CANVAS_NETIDS) {
-					//console.log("Checking " + sisidkey);
+                                        //console.log("Checking " + sisidkey);
                                         if(sisid === sisidkey && CANVAS_NETIDS[sisidkey] === netid) {
                                             user_id = canvasuserid;
                                             asmtidx = i;
-					    //console.log("Found " + user_id);
+                                            //console.log("Found " + user_id);
                                             break;
                                         }
                                     }

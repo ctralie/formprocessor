@@ -30,7 +30,7 @@ If using canvas
 * Run a file to obtain the internal IDs of each student to use on canvas
 node studentids_array.js
 * Set CANVAS_NETIDS to a dictionary of userid: netid, from the Grizzly Gateway student roster {"sisid": "netid"}
-* Set canvasasmtid in exercise page markdown to the assignment ID on canvas, as a comma separated array (parallel to course id and students arrays in config.json)
+* Set canvasasmtid in exercise page markdown to the assignment ID on canvas from assignment URL, as a comma separated array (parallel to course id and students arrays in config.json)
 
 * Finally, to start the server, run:
 ./run.sh

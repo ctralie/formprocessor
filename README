@@ -26,11 +26,11 @@ If using canvas
 * Generate canvas API key at https://ursinus.instructure.com/profile/settings and place in field CANVAS_API_KEY in config.json
 * Set CANVAS_COURSE_ID in config.json to be an array of course ID's (can obtain from the Canvas URL)
 * Set the CANVAS_HOST in canvas.json to be "ursinus.instructure.com"
-* Create an array of dictionary structures (one per section) "CANVAS_STUDENTS" in config.json which is {"userid":"sisid"}.  You can obtain this information from the roster on Grizzly Gateway
+* Create an array of dictionary structures (one per section, in parallel with the CANVAS_COURSE_ID array and the array of assignment ID's in the markdown files) "CANVAS_STUDENTS" in config.json which is {"userid":"sisid"}.  You can obtain this information from the roster on Grizzly Gateway
 * Run a file to obtain the internal IDs of each student to use on canvas
 node studentids_array.js
 * Set CANVAS_NETIDS to a dictionary of userid: netid, from the Grizzly Gateway student roster {"sisid": "netid"}
-* Set canvasasmtid in exercise page markdown to the assignment ID on canvas
+* Set canvasasmtid in exercise page markdown to the assignment ID on canvas, as a comma separated array (parallel to course id and students arrays in config.json)
 
 * Finally, to start the server, run:
 ./run.sh

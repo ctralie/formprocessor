@@ -358,6 +358,7 @@ const serverHandler = (req, res) => {
                                 }
                                 
                                 if (user_id.length > 0 && asmtidx >= 0) {
+                                    console.log("Posting assignment " + asmtid[asmtidx] + " to canvas for student " + netid + " (" + user_id + ")");
                                     httprequestCanvas("/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints+"&grade_data["+user_id+"][excuse]=true", 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
                                 } else {
                                     console.log("Warning: Student not found in canvas mapping " + netid);

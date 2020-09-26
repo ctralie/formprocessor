@@ -358,7 +358,7 @@ const serverHandler = (req, res) => {
                                 }
                                 
                                 if (user_id.length > 0 && asmtidx >= 0) {
-                                    let gradeurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints+"&grade_data["+user_id+"][excused]=true";
+                                    let gradeurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints;
                                     console.log("Posting assignment " + asmtid[asmtidx] + " to canvas for student " + netid + " (" + user_id + ") at " + gradeurl);
                                     httprequestCanvas(gradeurl, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
                                 } else {

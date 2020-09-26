@@ -367,7 +367,7 @@ const serverHandler = (req, res) => {
                                     let missingbody = "{ \"submission\": { \"late_policy_status\": \"none\" } }";
                                     httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
                                 } else {
-                                    console.log("Warning: Student not found in canvas mapping " + netid);
+                                    console.log("Warning: Student not found in canvas mapping " + netid + " in section " + CANVAS_STUDENTS[i]);
 				}
                             }
 

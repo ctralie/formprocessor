@@ -371,7 +371,7 @@ const serverHandler = (req, res) => {
                                         console.log("Error Posting to Canvas: " + err.message);
                                     }
                                 } else {
-                                    console.log("Warning: Student not found in canvas mapping " + netid);
+                                    console.log("Warning: Student not found in canvas mapping " + netid + " in section " + CANVAS_STUDENTS[i]);
 				}
                             }
 

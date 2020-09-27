@@ -365,7 +365,7 @@ const serverHandler = (req, res) => {
 
                                         let missingurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/" + user_id;
                                         console.log("Clearing missing status, if any: " + missingurl);
-                                        let missingbody = "{ \"submission\": { \"late_policy_status\": \"none\" } }";
+                                        let missingbody = { "submission": { "late_policy_status": "none" } }; 
                                         httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
                                     } catch(err) {
                                         console.log("Error Posting to Canvas: " + err.message);

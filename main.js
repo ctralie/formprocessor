@@ -17,6 +17,7 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const { parse } = require('querystring');
+var sleep = require('sleep');
 
 // Load in constants
 const constants = JSON.parse(fs.readFileSync(process.env.COURSEWD + "config.json"));
@@ -362,6 +363,8 @@ const serverHandler = (req, res) => {
                                         let gradeurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints;
                                         console.log("Posting assignment " + asmtid[asmtidx] + " to canvas for student " + netid + " (" + user_id + ") at " + gradeurl);
                                         httprequestCanvas(gradeurl, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
+
+                                        sleep.sleep(5);
 
                                         let missingurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/" + user_id;
                                         console.log("Clearing missing status, if any: " + missingurl);

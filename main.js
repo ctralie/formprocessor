@@ -48,6 +48,8 @@ function printResp(resp) {
 function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheaders={}, nextstep=null) {
     const https = require('https')
 
+    body = JSON.stringify(body)
+
     var reqheaders = {}
 
     if(body.length > 0) {
@@ -91,7 +93,7 @@ function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheade
     })
 
     if(body.length > 0) {
-        req.write(JSON.stringify(body));
+        req.write(body);
     }
 
     req.end();

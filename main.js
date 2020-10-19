@@ -251,7 +251,8 @@ function sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson) {
             console.log(result.body);
           })
           .catch((err) => {
-            console.log(err.statusCode)
+            console.log(err.statusCode);
+            //console.log(err.message);
           })       
     }  
 }
@@ -376,7 +377,7 @@ const serverHandler = (req, res) => {
                                         console.log("Error Posting to Canvas: " + err.message);
                                     }
                                 } else {
-                                    console.log("Warning: Student not found in canvas mapping " + netid + " in section " + CANVAS_STUDENTS[i]);
+                                    console.log("Warning: Student not found in canvas mapping " + netid + " in section " + i);
 				}
                             }
 

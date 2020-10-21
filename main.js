@@ -11,7 +11,8 @@
 //     API Key in MAILJET_API_KEY config.json variable
 //     https://app.mailjet.com/auth/get_started/developer
 //     npm install node-mailjet
-
+// SMTP:
+//     Set server, port, secure in SMTP config.json variable
 // Setup dependencies
 const https = require('https');
 const http = require('http');
@@ -97,6 +98,50 @@ function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheade
     }
 
     req.end();
+}
+
+async function sendSmtpMail(parsedjsonobj, facultyemail, title, unpackedjson) {
+    const nodemailer = require("nodemailer");
+
+    let host = constants['SMTP'].server;
+    let port = constants['SMTP'].port;
+    let secure = constants['SMTP'].secure;
+
+    console.log("SMTP sending to " + host);
+
+    let mailer = nodemailer.createTransport({
+        host: host, 
+        port: port,
+        secure: secure 
+        // also auth: { user: "XXX", pass: "XXX" }
+    });
+
+    if ('canvashalfcredit' in parsedjsonobj) {
+        // If half credit, only email the faculty member
+        let resp = await mailer.sendMail({
+            from: facultyemail,
+            to: facultyemail,
+            subject: title + ': Form Processor Submission (Half Credit)',
+            text: unpackedjson,
+            html: unpackedjson
+        }).catch((error) => {
+            console.log(error);
+        });
+        console.log(resp);
+    } else {
+        // Otherwise, e-mail the student and the faculty member
+        let resp = await mailer.sendMail({
+            from: facultyemail,
+            to: studentemail,
+            cc: facultyemail,
+            subject: title + ': Form Processor Submission',
+            text: unpackedjson,
+            html: unpackedjson
+        }).catch((error) => {
+            console.log(error);
+        });
+        console.log(resp);
+    }
 }
 
 function sendSgMail(parsedjsonobj, facultyemail, title, unpackedjson) {
@@ -286,7 +331,7 @@ const serverHandler = (req, res) => {
         });
 
         req.on('end', () => {
-            const parsedjsonobj = parse(body)
+            const parsedjsonobj = parse(body);
             console.log(parsedjsonobj);
 
             let unpackedjson = '';
@@ -318,7 +363,9 @@ const serverHandler = (req, res) => {
                         sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson);
                     } else if("MAILJET_API_KEY" in constants) {
                         sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                    }
+                    } else if("SMTP" in constants) {
+                        sendSmtpMail(parsedjsonobj, facultyemail, title, unpackedjson);
+		    }
                     
                     // Log
                     console.log(studentemail + "|" + facultyemail + "|" + title + "|" + unpackedjson)

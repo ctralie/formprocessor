@@ -16,6 +16,7 @@
 ** SOCKETLABS_API_KEY ({ "key": string, "server_id": numeric })
 ** MAILJET_API_KEY ({ "key": string, "secret": string })
 ** Or SMTP ({ "server": string, "port": number, "secure": boolean})
+** npm install nodemailer
 * Set FORMPROCESSOR_PORT in config.json
 * Edit run.sh to pushd your deployment directory
 * Set COURSEWD to working directory (with a trailing slash) in config.env

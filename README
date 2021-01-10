@@ -30,8 +30,24 @@ If using canvas
 * Create an array of dictionary structures (one per section, in parallel with the CANVAS_COURSE_ID array and the array of assignment ID's in the markdown files) "CANVAS_STUDENTS" in config.json which is {"userid":"sisid"}.  You can obtain this information from the roster on Grizzly Gateway
 * Run a file to obtain the internal IDs of each student to use on canvas
 node studentids.js
+... but be sure to use double quotes for the dictionary types instead of single quotes, for example:
+"CANVAS_STUDENTS": [
+        {
+          "0000": "99999999",
+          ...
+        },
+        {
+          "1111", "88888888",
+          ...
+        }
+        ...
+]
 * Set CANVAS_NETIDS to a dictionary of sisid: netid, from the Grizzly Gateway student roster (or Canvas gradebook) {"sisid": "netid"}
 Can use netidgenerator.xlsx
+For example:
+    "CANVAS_NETIDS": {
+        "9999999":"tstudent",
+    }
 * Be careful of leading 0's on CANVAS_STUDENTS and CANVAS_NETIDS
 * Set canvasasmtid in exercise page markdown to the assignment ID on canvas from assignment URL, as a comma separated array (parallel to course id and students arrays in config.json)
 

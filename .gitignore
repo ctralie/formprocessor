@@ -7,3 +7,4 @@ keys
 *.p7b
 *.crt
 config.json
+netidgenerator.xlsx

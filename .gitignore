@@ -8,3 +8,4 @@ keys
 *.crt
 config.json
 netidgenerator.xlsx
+*.zip

@@ -357,15 +357,20 @@ const serverHandler = (req, res) => {
                     title = parsedjsonobj['title'];
                     
                     // Email
-                    if("SENDGRID_API_KEY" in constants) {
-                        sendSgMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                    } else if("SOCKETLABS_API_KEY" in constants) {
-                        sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                    } else if("MAILJET_API_KEY" in constants) {
-                        sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                    } else if("SMTP" in constants) {
-                        sendSmtpMail(parsedjsonobj, facultyemail, title, unpackedjson);
-		    }
+                    try {
+                        if("SENDGRID_API_KEY" in constants) {
+                            sendSgMail(parsedjsonobj, facultyemail, title, unpackedjson);
+                        } else if("SOCKETLABS_API_KEY" in constants) {
+                            sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson);
+                        } else if("MAILJET_API_KEY" in constants) {
+                            sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson);
+                        } else if("SMTP" in constants) {
+                            sendSmtpMail(parsedjsonobj, facultyemail, title, unpackedjson);
+                        }
+                    } catch(e) {
+                        console.log("Error sending email!");
+                        console.log(e);
+                    }
                     
                     // Log
                     console.log(studentemail + "|" + facultyemail + "|" + title + "|" + unpackedjson)

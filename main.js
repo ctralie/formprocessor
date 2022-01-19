@@ -304,9 +304,9 @@ function sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson) {
 
 let httpsOptions = {
     key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
-     cert: fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_cert.cer'),
+    cert: fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_edu_cert.cer'),
     ca: [
-        fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_cert.cer'),      
+        fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_edu_cert.cer'),      
         fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_edu_interm.cer'),
         fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_edu_interm-issuer.cer')
     ],

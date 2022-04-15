@@ -352,30 +352,17 @@ const serverHandler = (req, res) => {
                     res.end('fail (authentication)')
                 } else {
                     let netid = parsedjsonobj['studentnetid'];
+                    netid = netid.toLowerCase();
                     facultyemail = parsedjsonobj['facultyemail'];
                     studentemail = netid + "@ursinus.edu";
                     title = parsedjsonobj['title'];
-                    
-                    // Email
-                    try {
-                        if("SENDGRID_API_KEY" in constants) {
-                            sendSgMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                        } else if("SOCKETLABS_API_KEY" in constants) {
-                            sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                        } else if("MAILJET_API_KEY" in constants) {
-                            sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                        } else if("SMTP" in constants) {
-                            sendSmtpMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                        }
-                    } catch(e) {
-                        console.log("Error sending email!");
-                        console.log(e);
-                    }
                     
                     // Log
                     console.log(studentemail + "|" + facultyemail + "|" + title + "|" + unpackedjson)
                     
                     // Post to canvas
+                    let studentfound = false;
+                    
                     if (FORMPROCESSOR_POST_TO_CANVAS) {
                         if ('canvasasmtid' in parsedjsonobj) {
                             let asmtid = parsedjsonobj['canvasasmtid'];
@@ -414,6 +401,8 @@ const serverHandler = (req, res) => {
                                 }
                                 
                                 if (user_id.length > 0 && asmtidx >= 0) {
+                                    studentfound = true;
+                                    
                                     try {
                                         let gradeurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints;
                                         console.log("Posting assignment " + asmtid[asmtidx] + " to canvas for student " + netid + " (" + user_id + ") at " + gradeurl);
@@ -423,22 +412,41 @@ const serverHandler = (req, res) => {
 
                                         let missingurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/" + user_id;
                                         console.log("Clearing missing status, if any: " + missingurl);
-                                        let missingbody = { "submission": { "late_policy_status": "none" } }; 
+                                        let missingbody = { "submission": { "late_policy_status": "none", "missing": false } }; 
                                         httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
                                     } catch(err) {
                                         console.log("Error Posting to Canvas: " + err.message);
                                     }
                                 } else {
                                     console.log("Warning: Student not found in canvas mapping " + netid + " in section " + i);
-				}
+                                }
                             }
-
                         }
                         else {
                             console.log("Warning: Requesting canvas post, but canvasasmtid field was not supplied");
                         }
                     }
-
+                    
+                    // Email
+                    if(studentfound || !FORMPROCESSOR_POST_TO_CANVAS) {
+                        try {
+                            if("SENDGRID_API_KEY" in constants) {
+                                sendSgMail(parsedjsonobj, facultyemail, title, unpackedjson);
+                            } else if("SOCKETLABS_API_KEY" in constants) {
+                                sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson);
+                            } else if("MAILJET_API_KEY" in constants) {
+                                sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson);
+                            } else if("SMTP" in constants) {
+                                sendSmtpMail(parsedjsonobj, facultyemail, title, unpackedjson);
+                            }
+                        } catch(e) {
+                            console.log("Error sending email!");
+                            console.log(e);
+                        }                    
+                    } else {
+                        console.log("Warning: Student with email address " + studentemail + " not found in database!");
+                    }
+                    
                     res.end('ok (input below)\n\n' + unpackedjson);
                 }
             }

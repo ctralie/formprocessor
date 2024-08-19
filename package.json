@@ -10,9 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sendgrid/mail": "^7.4.6",
     "googleapis": "^39.2.0",
-    "node-mailjet": "^3.3.4",
-    "nodemailer": "^6.6.3"
+    "sleep": "^6.3.0"
   }
 }

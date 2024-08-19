@@ -1,35 +1,18 @@
-// https://itnext.io/how-to-handle-the-post-request-body-in-node-js-without-using-a-framework-cd2038b93190
-// https://www.w3schools.com/nodejs/nodejs_email.asp
-// SendGrid:
-//     https://app.sendgrid.com/guide/integrate/langs/nodejs
-//     npm install --save @sendgrid/mail 
-//     API Key in SENDGRID_API_KEY config.json variable
-// SocketLabs:
-//     https://www.socketlabs.com/send-email-nodejs/
-//     API Key in SOCKETLABS_API_KEY config.json variable
-// MailJet:
-//     API Key in MAILJET_API_KEY config.json variable
-//     https://app.mailjet.com/auth/get_started/developer
-//     npm install node-mailjet
-// SMTP:
-//     Set server, port, secure in SMTP config.json variable
-// Setup dependencies
 const https = require('https');
-const http = require('http');
 const fs = require('fs');
-const { parse } = require('querystring');
-var sleep = require('sleep');
+const JSEncrypt = require('node-jsencrypt');
+const crypto = require('crypto').webcrypto;
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
+var sleep = require('sleep'); // npm install sleep
 
 // Load in constants
-const constants = JSON.parse(fs.readFileSync(process.env.COURSEWD + "config.json"));
-const FORMPROCESSOR_PORT = constants["FORMPROCESSOR_PORT"];
-const FORMPROCESSOR_USE_HTTPS = constants["FORMPROCESSOR_USE_HTTPS"];
-const FORMPROCESSOR_POST_TO_CANVAS = constants["FORMPROCESSOR_POST_TO_CANVAS"];;
+const constants = JSON.parse(fs.readFileSync("config.json"));
 const CANVAS_API_KEY = constants["CANVAS_API_KEY"];
-const CANVAS_COURSE_ID = constants["CANVAS_COURSE_ID"];
 const CANVAS_HOST = constants["CANVAS_HOST"];
 const CANVAS_STUDENTS = constants["CANVAS_STUDENTS"];
 const CANVAS_NETIDS = constants["CANVAS_NETIDS"];
+const PRIVATE_KEY = constants["PRIVATE_KEY"];
 
 function printResp(resp) {
     console.log(resp);
@@ -47,7 +30,6 @@ function printResp(resp) {
  * @param {function} nextstep A function to execute on the response object once this request is complete
  */
 function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheaders={}, nextstep=null) {
-    const https = require('https')
 
     body = JSON.stringify(body)
 
@@ -100,382 +82,164 @@ function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheade
     req.end();
 }
 
-async function sendSmtpMail(parsedjsonobj, facultyemail, title, unpackedjson) {
-    const nodemailer = require("nodemailer");
 
-    let host = constants['SMTP'].server;
-    let port = constants['SMTP'].port;
-    let secure = constants['SMTP'].secure;
 
-    console.log("SMTP sending to " + host);
-
-    let mailer = nodemailer.createTransport({
-        host: host, 
-        port: port,
-        secure: secure 
-        // also auth: { user: "XXX", pass: "XXX" }
-    });
-
-    if ('canvashalfcredit' in parsedjsonobj) {
-        // If half credit, only email the faculty member
-        let resp = await mailer.sendMail({
-            from: facultyemail,
-            to: facultyemail,
-            subject: title + ': Form Processor Submission (Half Credit)',
-            text: unpackedjson,
-            html: unpackedjson
-        }).catch((error) => {
-            console.log(error);
-        });
-        console.log(resp);
-    } else {
-        // Otherwise, e-mail the student and the faculty member
-        let resp = await mailer.sendMail({
-            from: facultyemail,
-            to: studentemail,
-            cc: facultyemail,
-            subject: title + ': Form Processor Submission',
-            text: unpackedjson,
-            html: unpackedjson
-        }).catch((error) => {
-            console.log(error);
-        });
-        console.log(resp);
+function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
     }
+    return bytes.buffer;
 }
 
-function sendSgMail(parsedjsonobj, facultyemail, title, unpackedjson) {
-    const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey(constants["SENDGRID_API_KEY"]);
 
-    let msg = {};
-    // If half credit, only e-mail the faculty member
-    if ('canvashalfcredit' in parsedjsonobj) {
-        msg = {
-            to: facultyemail,
-            from: facultyemail,
-            subject: title + ': Form Processor Submission (Half Credit)',
-            text: unpackedjson,
-            html: unpackedjson
-        };  
-    }
-    // Otherwise, e-mail the student and the faculty member
-    else {
-        msg = {
-            to: studentemail,
-            cc: facultyemail,
-            from: facultyemail,
-            subject: title + ': Form Processor Submission',
-            text: unpackedjson,
-            html: unpackedjson
-        };                    
-    }
+/**
+ * 
+ * @param {string} payload A base64 encoded payload
+ * @param {string} privateKey Private key string
+ */
+async function decryptData(payload, privateKey) {
+    let data = JSON.parse(Buffer.from(payload, 'base64').toString());
 
-    // Send email
-    sgMail.send(msg).then(() => {
-        let logprint = "Message sent via SendGrid to " + msg.to;
-        if ('cc' in msg) {
-            logprint += " and CCed to " + msg['cc'];
-        }
-        console.log(logprint);
-    }).catch((error) => {
-            console.log(error.response.body);
-    });    
-}
+    const rsaDecrypt = new JSEncrypt();
+    rsaDecrypt.setPrivateKey(privateKey);
+    let aesKey = base64ToArrayBuffer(rsaDecrypt.decrypt(data.aesKey));
 
-function sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson) {
-    const {SocketLabsClient} = require('@socketlabs/email');
+    aesKey = await crypto.subtle.importKey(
+        "raw", 
+        aesKey,
+        {
+            name: 'AES-CBC',
+            length: 256,
+        },
+        true,
+        ['encrypt', 'decrypt']
+    );
 
-    const client = new SocketLabsClient(parseInt(constants["SOCKETLABS_API_KEY"].server_id), constants["SOCKETLABS_API_KEY"].key);
-
-    let message = {};
+    for (let i = 0; i < data.files.length; i++) {
+        let file = await crypto.subtle.decrypt(
+            {
+                name: 'AES-CBC',
+                iv: base64ToArrayBuffer(data.iv),
+            },
+            aesKey,
+            base64ToArrayBuffer(data.files[i].content)
+        );
     
-    // If half credit, only e-mail the faculty member
-    if ('canvashalfcredit' in parsedjsonobj) {
-        message = {
-            to: facultyemail,
-            from: facultyemail,
-            subject: title + ': Form Processor Submission (Half Credit)',
-            textBody: unpackedjson,
-            htmlBody: unpackedjson,
-            messageType: 'basic'
+        let decoder = new TextDecoder();
+        data.files[i].content = decoder.decode(file);
+    }
+    return data;
+}
+
+
+async function processResponse(parsedjsonobj) {
+    // TODO: Finish this
+    let netid = parsedjsonobj['user'];
+    netid = netid.toLowerCase();
+    
+    // Post to canvas
+    let studentfound = false;
+    
+    
+    if ('canvasasmtid' in parsedjsonobj) {
+        let asmtid = parsedjsonobj['canvasasmtid'];
+        asmtid = asmtid.split(',');
+        let canvaspoints = 2.0;
+        if ('canvaspoints' in parsedjsonobj) {
+            canvaspoints = parseFloat(parsedjsonobj['canvaspoints']);
         }
-    } 
-    // Otherwise, e-mail the student and the faculty member
-    else {
-        message = {
-            to: studentemail,
-            from: facultyemail,
-            cc: facultyemail,
-            subject: title + ': Form Processor Submission',
-            textBody: unpackedjson,
-            htmlBody: unpackedjson,
-            messageType: 'basic'
-        }        
-    }
-
-    client.send(message); 
-
-    let logprint = "Message sent via SocketLabs to " + msg.to;
-    if ('cc' in msg) {
-        logprint += " and CCed to " + msg['cc'];
-    }
-    console.log(logprint);    
-}
-
-function sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson) {
-    const mailjet = require('node-mailjet').connect(constants["MAILJET_API_KEY"].key, constants["MAILJET_API_KEY"].secret);
-       
-    // If half credit, only e-mail the faculty member
-    if ('canvashalfcredit' in parsedjsonobj) {
-        const request = mailjet
-            .post("send", {'version': 'v3.1'})
-            .request({
-              "Messages":[
-                {
-                  "From": {
-                    "Email": facultyemail,
-                    "Name": facultyemail
-                  },
-                  "To": [
-                    {
-                      "Email": facultyemail,
-                      "Name": facultyemail
+        else {
+            console.log("Warning: Requesting canvas post, but canvaspoints field was not supplied");
+        }
+        if ('canvashalfcredit' in parsedjsonobj) {
+            canvaspoints = canvaspoints / 2;
+        }
+        asmtidx = -1;
+        for (i = 0; i < CANVAS_STUDENTS.length; i++) { // for multiple sections
+            let user_id = ''; // find netid in this section of enrollments, or empty if not found
+            
+            for(canvasuserid in CANVAS_STUDENTS[i]) {
+                sisid = CANVAS_STUDENTS[i][canvasuserid];
+                
+                //console.log(sisid + " " + canvasuserid);
+                for(sisidkey in CANVAS_NETIDS) {
+                    //console.log("Checking " + sisidkey);
+                    if(sisid === sisidkey && CANVAS_NETIDS[sisidkey] === netid) {
+                        user_id = canvasuserid;
+                        asmtidx = i;
+                        //console.log("Found " + user_id);
+                        break;
                     }
-                  ],             
-                  "Subject": title + ': Form Processor Submission (Half Credit)',
-                  "TextPart": unpackedjson,
-                  "HTMLPart": unpackedjson
                 }
-              ]
-            })
-        request
-          .then((result) => {
-            let logprint = "Message sent via MailJet to " + facultyemail;
-            console.log(logprint);
-            console.log(result.body);
-          })
-          .catch((err) => {
-            console.log(err.statusCode)
-          }) 
-    } 
-    // Otherwise, e-mail the student and the faculty member
-    else {
-        const request = mailjet
-            .post("send", {'version': 'v3.1'})
-            .request({
-              "Messages":[
-                {
-                  "From": {
-                    "Email": facultyemail,
-                    "Name": facultyemail
-                  },
-                  "To": [
-                    {
-                      "Email": studentemail,
-                      "Name": studentemail
-                    }
-                  ],
-                  "Cc": [
-                    {
-                      "Email": facultyemail,
-                      "Name": facultyemail
-                    }
-                  ],               
-                  "Subject": title + ': Form Processor Submission',
-                  "TextPart": unpackedjson,
-                  "HTMLPart": unpackedjson
+                
+                if(user_id.length > 0 && asmtidx >= 0) {
+                    break;
                 }
-              ]
-            })
-        request
-          .then((result) => {
-            let logprint = "Message sent via MailJet to " + studentemail;
-            logprint += " and CCed to " + facultyemail;
-            console.log(logprint);
-            console.log(result.body);
-          })
-          .catch((err) => {
-            console.log(err.statusCode);
-            //console.log(err.message);
-          })       
-    }  
-}
-
-let httpsOptions = {
-    key: fs.readFileSync('keys/mathcs-ursinus/mathcs.ursinus.key'),
-    cert: fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_edu_cert.cer'),
-    ca: [
-        fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_edu_cert.cer'),      
-        fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_edu_interm.cer'),
-        fs.readFileSync('keys/mathcs-ursinus/mathcs_ursinus_edu_interm-issuer.cer')
-    ],
-    ciphers: [
-        "ECDHE-RSA-AES128-SHA256",
-        "DHE-RSA-AES128-SHA256",
-        "AES128-GCM-SHA256",
-        "RC4",
-        "HIGH",
-        "!MD5",
-        "!aNULL"
-        ].join(':'),
-};
-
-const serverHandler = (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    if(req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => {
-            body += chunk.toString();
-        });
-
-        req.on('end', () => {
-            const parsedjsonobj = parse(body);
-            console.log(parsedjsonobj);
-
-            let unpackedjson = '';
-            for(var key in parsedjsonobj) {
-                unpackedjson += "*** " + key + " ***<br>" + parsedjsonobj[key] + "<br><br>";
             }
-
-            unpackedjson = unpackedjson.replace(/\r\n/g, '\n');
-            unpackedjson = unpackedjson.replace(/\r/g, '\n');
-            unpackedjson = unpackedjson.replace(/\n/g, '<br>');
-            unpackedjson = unpackedjson.replace(/ /g, '&nbsp;');
-            unpackedjson = unpackedjson.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
-
-            if(! ('facultyemail' in parsedjsonobj && 'studentnetid' in parsedjsonobj && 'title' in parsedjsonobj)) {
-                res.end('fail (required form keys: facultyemail, studentnetid, title)');
+            
+            if (user_id.length > 0 && asmtidx >= 0) {
+                studentfound = true;
+                
+                try {
+                    let gradeurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints;
+                    console.log("Posting assignment " + asmtid[asmtidx] + " to canvas for student " + netid + " (" + user_id + ") at " + gradeurl);
+                    httprequestCanvas(gradeurl, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
+    
+                    sleep.sleep(5);
+    
+                    let missingurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/" + user_id;
+                    console.log("Clearing missing status, if any: " + missingurl);
+                    let missingbody = { "submission": { "late_policy_status": "none", "missing": false, "workflow_state": "submitted", "read_status": "read" } }; 
+                    httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
+                } catch(err) {
+                    console.log("Error Posting to Canvas: " + err.message);
+                }
             } else {
-                if(!('magic' in parsedjsonobj) || (parsedjsonobj['magic'] != 'ursinus')) {
-                    res.end('fail (authentication)')
-                } else {
-                    let netid = parsedjsonobj['studentnetid'];
-                    netid = netid.toLowerCase();
-                    facultyemail = parsedjsonobj['facultyemail'];
-                    studentemail = netid + "@ursinus.edu";
-                    title = parsedjsonobj['title'];
-                    
-                    // Log
-                    console.log(studentemail + "|" + facultyemail + "|" + title + "|" + unpackedjson)
-                    
-                    // Post to canvas
-                    let studentfound = false;
-                    
-                    if (FORMPROCESSOR_POST_TO_CANVAS) {
-                        if ('canvasasmtid' in parsedjsonobj) {
-                            let asmtid = parsedjsonobj['canvasasmtid'];
-                            asmtid = asmtid.split(',');
-                            let canvaspoints = 2.0;
-                            if ('canvaspoints' in parsedjsonobj) {
-                                canvaspoints = parseFloat(parsedjsonobj['canvaspoints']);
-                            }
-                            else {
-                                console.log("Warning: Requesting canvas post, but canvaspoints field was not supplied");
-                            }
-                            if ('canvashalfcredit' in parsedjsonobj) {
-                                canvaspoints = canvaspoints / 2;
-                            }
-                            asmtidx = -1;
-                            for (i = 0; i < CANVAS_STUDENTS.length; i++) { // for multiple sections
-                                let user_id = ''; // find netid in this section of enrollments, or empty if not found
-                                
-                                for(canvasuserid in CANVAS_STUDENTS[i]) {
-                                    sisid = CANVAS_STUDENTS[i][canvasuserid];
-                                   
-                                    //console.log(sisid + " " + canvasuserid);
-                                    for(sisidkey in CANVAS_NETIDS) {
-                                        //console.log("Checking " + sisidkey);
-                                        if(sisid === sisidkey && CANVAS_NETIDS[sisidkey] === netid) {
-                                            user_id = canvasuserid;
-                                            asmtidx = i;
-                                            //console.log("Found " + user_id);
-                                            break;
-                                        }
-                                    }
-                                    
-                                    if(user_id.length > 0 && asmtidx >= 0) {
-                                        break;
-                                    }
-                                }
-                                
-                                if (user_id.length > 0 && asmtidx >= 0) {
-                                    studentfound = true;
-                                    
-                                    try {
-                                        let gradeurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints;
-                                        console.log("Posting assignment " + asmtid[asmtidx] + " to canvas for student " + netid + " (" + user_id + ") at " + gradeurl);
-                                        httprequestCanvas(gradeurl, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
-
-                                        sleep.sleep(5);
-
-                                        let missingurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/" + user_id;
-                                        console.log("Clearing missing status, if any: " + missingurl);
-                                        let missingbody = { "submission": { "late_policy_status": "none", "missing": false, "workflow_state": "submitted", "read_status": "read" } }; 
-                                        httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
-                                    } catch(err) {
-                                        console.log("Error Posting to Canvas: " + err.message);
-                                    }
-                                } else {
-                                    console.log("Warning: Student not found in canvas mapping " + netid + " in section " + i);
-                                }
-                            }
-                        }
-                        else {
-                            console.log("Warning: Requesting canvas post, but canvasasmtid field was not supplied");
-                        }
-                    }
-                    
-                    // Email
-                    if(studentfound || !FORMPROCESSOR_POST_TO_CANVAS) {
-                        try {
-                            if("SENDGRID_API_KEY" in constants) {
-                                sendSgMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                            } else if("SOCKETLABS_API_KEY" in constants) {
-                                sendSocketLabsMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                            } else if("MAILJET_API_KEY" in constants) {
-                                sendMailJetMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                            } else if("SMTP" in constants) {
-                                sendSmtpMail(parsedjsonobj, facultyemail, title, unpackedjson);
-                            }
-                        } catch(e) {
-                            console.log("Error sending email!");
-                            console.log(e);
-                        }                    
-                    } else {
-                        console.log("Warning: Student with email address " + studentemail + " not found in database!");
-                    }
-                    
-                    res.end('ok (input below)\n\n' + unpackedjson);
-                }
+                console.log("Warning: Student not found in canvas mapping " + netid + " in section " + i);
             }
-        });
-    } else {
-        res.end(`
-            <!doctype html>
-            <html>
-            <body>
-                Please submit a form via POST.
-                <!--
-                <form action="/" method="post">
-                    Test: <input type="text" name="test" /><br />
-                    Test2: <input type="text" name="test2" /></br />
-                    <input type="submit" name="submit" value="Submit" />
-                </form>
-                -->
-            </body>
-            </html>
-        `);
-    } 
-};
-
-let server = null;
-if (FORMPROCESSOR_USE_HTTPS) {
-    server = https.createServer(httpsOptions, serverHandler);
-}
-else {
-    server = http.createServer(serverHandler);
+        }
+    }
+    else {
+        console.log("Warning: Requesting canvas post, but canvasasmtid field was not supplied");
+    }
+    
+    res.end('ok (input below)\n\n' + unpackedjson);
 }
 
-server.listen(FORMPROCESSOR_PORT);
+
+async function pollGoogleForm() {
+    while (true) {
+        await exec('python html_parser.py'); // I had trouble getting this to work in Javascript so I used BeautifulSoup in python
+        let responses = JSON.parse(fs.readFileSync("responses.json"));
+    
+        // Step 1: Find the first response that we haven't processed yet
+        let lastDate = fs.readFileSync("lastDate.txt").toString();
+        let startIdx = 0;
+        let foundStart = false;
+        while (startIdx < responses.length && !foundStart) {
+            if (responses[startIdx].date == lastDate) {
+                foundStart = true;
+            }
+            startIdx++;
+        }
+        if (foundStart) {
+            // TODO: Update this to lastDate.txt
+            fs.writeFileSync("yee.txt", responses[responses.length-1].date);
+        }
+    
+        // Step 2: Loop through and process each response
+        for (let i = startIdx; i < responses.length; i++) {
+            let data = await decryptData(responses[i].payload, PRIVATE_KEY);
+            console.log(responses[i].date, data);
+            //processResponse(data);
+        }
+        
+        // Step 3: Wait a minute to try again
+        sleep.sleep(60);
+    }
+}
+
+pollGoogleForm();

@@ -219,6 +219,7 @@ async function pollGoogleForm() {
         let lastDate = fs.readFileSync("lastDate.txt").toString().trim();
         let startIdx = 0;
         let foundStart = false;
+        /*
         while (startIdx < responses.length && !foundStart) {
             responses[startIdx].date = responses[startIdx].date.trim();
             if (responses[startIdx].date == lastDate) {
@@ -228,8 +229,10 @@ async function pollGoogleForm() {
         }
         if (foundStart) {
             // TODO: Update this to lastDate.txt
-            fs.writeFileSync("yee.txt", responses[responses.length-1].date);
+            lastDate = responses[responses.length-1].date;
+            fs.writeFileSync("yee.txt", lastDate);
         }
+        */
     
         // Step 2: Loop through and process each response
         for (let i = startIdx; i < responses.length; i++) {

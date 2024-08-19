@@ -216,10 +216,11 @@ async function pollGoogleForm() {
         let responses = JSON.parse(fs.readFileSync("responses.json"));
     
         // Step 1: Find the first response that we haven't processed yet
-        let lastDate = fs.readFileSync("lastDate.txt").toString();
+        let lastDate = fs.readFileSync("lastDate.txt").toString().trim();
         let startIdx = 0;
         let foundStart = false;
         while (startIdx < responses.length && !foundStart) {
+            responses[startIdx].date = responses[startIdx].date.trim();
             if (responses[startIdx].date == lastDate) {
                 foundStart = true;
             }

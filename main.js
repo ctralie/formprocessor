@@ -13,6 +13,7 @@ const CANVAS_HOST = constants["CANVAS_HOST"];
 const CANVAS_STUDENTS = constants["CANVAS_STUDENTS"];
 const CANVAS_NETIDS = constants["CANVAS_NETIDS"];
 const PRIVATE_KEY = constants["PRIVATE_KEY"];
+const GOOGLE_SPREADSHEET_ID = constants["GOOGLE_SPREADSHEET_ID"];
 
 function printResp(resp) {
     console.log(resp);
@@ -212,8 +213,15 @@ async function processResponse(parsedjsonobj) {
 
 async function pollGoogleForm() {
     while (true) {
-        await exec('python html_parser.py'); // I had trouble getting this to work in Javascript so I used BeautifulSoup in python
-        let responses = JSON.parse(fs.readFileSync("responses.json"));
+        await exec("curl -k -L 'https://docs.google.com/spreadsheets/d/" + GOOGLE_SPREADSHEET_ID + "/export?exportFormat=csv' -o responses.csv");
+        let rows = fs.readFileSync("responses.csv").toString().split("\n");
+        let responses = [];
+        for (let i = 1; i < rows.length; i++) {
+            let fields = rows[i].split(",").filter(s => s.trim());
+            if (fields[1] == "magic") {
+                responses.push({"date":fields[0], "payload":fields[2]});
+            }
+        }
     
         // Step 1: Find the first response that we haven't processed yet
         let lastDate = fs.readFileSync("lastDate.txt").toString().trim();
@@ -236,9 +244,15 @@ async function pollGoogleForm() {
     
         // Step 2: Loop through and process each response
         for (let i = startIdx; i < responses.length; i++) {
-            let data = await decryptData(responses[i].payload, PRIVATE_KEY);
-            console.log(responses[i].date, data);
-            //processResponse(data);
+            try {
+                let data = await decryptData(responses[i].payload, PRIVATE_KEY);
+                console.log(responses[i].date, data);
+                //processResponse(data);
+            }
+            catch (exception) {
+                console.log("Failure on", responses[i].date);
+                console.log(exception);
+            }
         }
         
         // Step 3: Wait a minute to try again

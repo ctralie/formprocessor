@@ -1,100 +1,16 @@
 ## Getting Started
-* Sign up for SendGrid, MailJet, or SocketLabs
-* SendGrid:
-** https://app.sendgrid.com/guide/integrate/langs/nodejs
-** npm install --save @sendgrid/mail 
-** API Key in SENDGRID_API_KEY config.json variable
-* SocketLabs:
-** https://www.socketlabs.com/send-email-nodejs/
-** API Key in SOCKETLABS_API_KEY config.json variable
-* MailJet:
-** API Key in MAILJET_API_KEY config.json variable
-** https://app.mailjet.com/auth/get_started/developer
-** npm install node-mailjet
-* Put API key into config.json as one of the following:
-** SENDGRID_API_KEY (string)
-** SOCKETLABS_API_KEY ({ "key": string, "server_id": numeric })
-** MAILJET_API_KEY ({ "key": string, "secret": string })
-** Or SMTP ({ "server": string, "port": number, "secure": boolean})
-** npm install nodemailer
-* Set FORMPROCESSOR_PORT in config.json
-* Edit run.sh to pushd your deployment directory
-* Set COURSEWD to working directory (with a trailing slash) in config.env
-* Set FORMPROCESSOR_USE_HTTPS in config.json ({ key: val, ... })
+1) Go to https://docs.google.com/forms/
+Make a google form with the fields "magic" (short answer) and "payload" (paragraph)  
+2) Go to Settings->responses and turn off requiring sign in  
+3) Get a prefilled link, ensure magic is set to magic and payload is empty, change to
+formResponse?submit=Submit  
+4) Under responses, link to sheets   
+5) Change spreadsheet sharing so that anyone with a link can be a viewer  
+6) Take note of the spreadsheet ID, put in config file for backend  
 
-If using canvas
-* Set the field FORMPROCESSOR_POST_TO_CANVAS to be true in config.json
-* Generate canvas API key at https://ursinus.instructure.com/profile/settings and place in field CANVAS_API_KEY in config.json
-* Set CANVAS_COURSE_ID in config.json to be an array of course ID's (can obtain from the Canvas URL)
-* Set the CANVAS_HOST in canvas.json to be "ursinus.instructure.com"
-* Create an array of dictionary structures (one per section, in parallel with the CANVAS_COURSE_ID array and the array of assignment ID's in the markdown files) "CANVAS_STUDENTS" in config.json which is {"userid":"sisid"}.  You can obtain this information from the roster on Grizzly Gateway
-* Run a file to obtain the internal IDs of each student to use on canvas
-node studentids.js
-... but be sure to use double quotes for the dictionary types instead of single quotes, for example:
-"CANVAS_STUDENTS": [
-        {
-          "0000": "99999999",
-          ...
-        },
-        {
-          "1111", "88888888",
-          ...
-        }
-        ...
-]
-* Set CANVAS_NETIDS to a dictionary of sisid: netid, from the Grizzly Gateway student roster (or Canvas gradebook) {"sisid": "netid"}
-Can use netidgenerator.xlsx
-For example:
-    "CANVAS_NETIDS": {
-        "9999999":"tstudent",
-    }
-* Be careful of leading 0's on CANVAS_STUDENTS and CANVAS_NETIDS
-* Set canvasasmtid in exercise page markdown to the assignment ID on canvas from assignment URL, as a comma separated array (parallel to course id and students arrays in config.json)
+## config.json Constants
 
-* Finally, to start the server, run:
-./run.sh
-
-To run the server on startup, add something like this to /etc/rc.local:
-sudo -i -u wmongan /home/wmongan/opt/formprocessor/run.sh
-
-or to crontab
-@reboot /home/wmongan/opt/formprocessor/run.sh
-
-SendGrid requires validating your email address as a sender on their dashboard (on the left menu to validate)
-
-HTML forms must contain:
-studentnetid
-facultyemail
-title
-magic = ursinus
-
-HTML forms optinally contain:
-canvasasmtid
-canvaspoints
-canvashalfcredit
-
-All form parameters will be emailed to facultyemail and studentemail
-
-=====
-
-For markdown/github pages clients, set the following:
-
-formprocessor: "https://192.204.148.92:8082/"
-enctype: "application/x-www-form-urlencoded"
-facultyemail: "billmongan@gmail.com"
-
-in quiz.html/exercise.html in github pages 
-
-if using canvas, also set the following:
-canvasasmtid: "canvas course ID"
-canvaspoints: "number of points this exercise is worth"
-canvashalftries: Number of attempts until half credit (optional)
-
-=====
-Must be reached from http page if using http mode
-Configured to use https by default, must generate a key as follows:
-openssl genrsa -out key.pem
-openssl req -new -key key.pem -out csr.pem
-openssl x509 -req -days 9999 -in csr.pem -signkey key.pem -out cert.pem
-Set key/cert paths in main.js to these files in options variable that is passed to createServer
-
+CANVAS_API_KEY  
+CANVAS_HOST  
+PRIVATE_KEY  
+GOOGLE_SPREADSHEET_ID  

@@ -297,14 +297,19 @@ async function pollGoogleForm() {
         // Step 2: Loop through and process each response
         for (let i = startIdx; i < responses.length; i++) {
             let success = false;
+            let user = "";
             try {
                 let data = await decryptData(responses[i].payload, PRIVATE_KEY);
                 success = await processResponse(data);
+                user = data.user;
             }
             catch (exception) {
                 console.log(exception);
             }
-            if (!success) {
+            if (success) {
+                console.log("Success for", user, "on", responses[i].date, "!");
+            }
+            else {
                 console.log("Failure on", responses[i].date);
             }
             // Append this to "allData.txt" no matter what just in case there's a problem

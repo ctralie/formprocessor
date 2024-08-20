@@ -302,8 +302,10 @@ async function pollGoogleForm() {
                 success = await processResponse(data);
             }
             catch (exception) {
-                console.log("Failure on", responses[i].date);
                 console.log(exception);
+            }
+            if (!success) {
+                console.log("Failure on", responses[i].date);
             }
             // Append this to "allData.txt" no matter what just in case there's a problem
             // and we need to go back

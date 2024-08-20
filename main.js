@@ -96,7 +96,7 @@ function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheade
 function getCanvasRosterConversions(courseId) {
     return new Promise(resolve => {
       httprequestCanvas(
-        "/api/v1/courses/"+courseId+"/enrollments?per_page=100&include[]=email", 443, "GET", "", {"Authorization": "Bearer " + APIKEY}, 
+        "/api/v1/courses/"+courseId+"/enrollments?per_page=100&include[]=email", 443, "GET", "", {"Authorization": "Bearer " + CANVAS_API_KEY}, 
         function(resp){
           let netid2id = {};
           for (let i = 0; i < resp.length; i++) {
@@ -201,8 +201,8 @@ async function processResponse(data) {
     let userId = -1;
     let courseId = -1;
     let asmtId = -1;
-    for (let i = 0; i < courseId.length; i++) {
-        let netid2id = await getCanvasRosterConversions(courseId[i]);
+    for (let i = 0; i < courseIds.length; i++) {
+        let netid2id = await getCanvasRosterConversions(courseIds[i]);
         if (netid in netid2id) {
             userFound = true;
             userId = netid2id[netid];
@@ -244,7 +244,7 @@ async function processResponse(data) {
         console.log("Error Posting to Canvas: " + err.message);
     }
 
-    res.end('ok (input below)\n\n' + unpackedjson);
+    console.log("Success!");
 }
 
 
@@ -270,34 +270,32 @@ async function pollGoogleForm() {
         // Step 1: Find the first response that we haven't processed yet
         let lastDate = fs.readFileSync("lastDate.txt").toString().trim();
         let startIdx = 0;
-        let foundStart = false;
-        /*
-        while (startIdx < responses.length && !foundStart) {
-            responses[startIdx].date = responses[startIdx].date.trim();
-            if (responses[startIdx].date == lastDate) {
-                foundStart = true;
+        if (lastDate.length > 0) {
+            let foundStart = false;
+            while (startIdx < responses.length && !foundStart) {
+                responses[startIdx].date = responses[startIdx].date.trim();
+                if (responses[startIdx].date == lastDate) {
+                    foundStart = true;
+                }
+                startIdx++;
             }
-            startIdx++;
         }
-        if (foundStart) {
-            // TODO: Update this to lastDate.txt
-            lastDate = responses[responses.length-1].date;
-            fs.writeFileSync("yee.txt", lastDate);
-        }
-        */
     
         // Step 2: Loop through and process each response
         for (let i = startIdx; i < responses.length; i++) {
             try {
                 let data = await decryptData(responses[i].payload, PRIVATE_KEY);
                 console.log(responses[i].date, data);
-                processResponse(data);
+                await processResponse(data);
             }
             catch (exception) {
                 console.log("Failure on", responses[i].date);
                 console.log(exception);
             }
         }
+        lastDate = responses[responses.length-1].date;
+        fs.writeFileSync("lastDate.txt", lastDate);
+
 
         // TODO: Accumulate all new stuff at the end of a logfile
         

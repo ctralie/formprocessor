@@ -168,21 +168,22 @@ async function decryptData(payload, privateKey) {
 /**
  * Post a submission from a particular payload to canvas
  * @param {object} data Unencrypted payload sent down from a module
- * @returns 
+ * @returns true if successful, false otherwise
  */
 async function processResponse(data) {   
+    let success = false;
     // Post to canvas
     if (!('courseId' in data)) {
         console.log("Warning: Requesting canvas post, but courseId field was not supplied");
-        return;
+        return false;
     }
     if (!('asmtId' in data)) {
         console.log("Warning: Requesting canvas post, but asmtId field was not supplied");
-        return;
+        return false;
     }
     if (!('points' in data)) {
         console.log("Warning: Requesting canvas post, but points field was not supplied");
-        return;
+        return false;
     }
 
     // Step 1: Unpack all of the metadata needed to make this post
@@ -214,7 +215,7 @@ async function processResponse(data) {
     // Step 3: Make canvas requests
     if (!userFound) {
         console.log("Warning: Student not found in canvas mapping " + netid + " in courses " + courseId);
-        return;
+        return false;
     }
     try {
         // Step 2a: Post score to canvas
@@ -239,15 +240,19 @@ async function processResponse(data) {
                 resolve();
             });
         })
-
+        success = true;
     } catch(err) {
         console.log("Error Posting to Canvas: " + err.message);
+        success = false;
     }
 
-    console.log("Success!");
+    return success;
 }
 
-
+/**
+ * Repeatedly download the csv file from the google spreadsheet and 
+ * post any new submissions that come through
+ */
 async function pollGoogleForm() {
     while (true) {
         await exec("curl -k -L 'https://docs.google.com/spreadsheets/d/" + GOOGLE_SPREADSHEET_ID + "/export?exportFormat=csv' -o responses.csv");
@@ -268,36 +273,46 @@ async function pollGoogleForm() {
         }
     
         // Step 1: Find the first response that we haven't processed yet
-        let lastDate = fs.readFileSync("lastDate.txt").toString().trim();
         let startIdx = 0;
-        if (lastDate.length > 0) {
-            let foundStart = false;
-            while (startIdx < responses.length && !foundStart) {
-                responses[startIdx].date = responses[startIdx].date.trim();
-                if (responses[startIdx].date == lastDate) {
-                    foundStart = true;
+        try {
+            let lastDate = fs.readFileSync("lastDate.txt").toString().trim();
+            if (lastDate.length > 0) {
+                let foundStart = false;
+                while (startIdx < responses.length && !foundStart) {
+                    responses[startIdx].date = responses[startIdx].date.trim();
+                    if (responses[startIdx].date == lastDate) {
+                        foundStart = true;
+                    }
+                    startIdx++;
                 }
-                startIdx++;
             }
         }
+        catch(err) {
+            if (!(err.code === 'ENOENT')) {
+                console.log(err);
+            }
+        }
+
     
         // Step 2: Loop through and process each response
         for (let i = startIdx; i < responses.length; i++) {
+            let success = false;
             try {
                 let data = await decryptData(responses[i].payload, PRIVATE_KEY);
-                console.log(responses[i].date, data);
-                await processResponse(data);
+                success = await processResponse(data);
             }
             catch (exception) {
                 console.log("Failure on", responses[i].date);
                 console.log(exception);
             }
+            // Append this to "allData.txt" no matter what just in case there's a problem
+            // and we need to go back
+            responses[i].success = success;
+            fs.appendFileSync("allData.txt", JSON.stringify(responses[i]) + "\n");
         }
         lastDate = responses[responses.length-1].date;
         fs.writeFileSync("lastDate.txt", lastDate);
 
-
-        // TODO: Accumulate all new stuff at the end of a logfile
         
         // Step 3: Wait a minute to try again
         sleep.sleep(60);

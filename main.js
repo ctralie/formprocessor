@@ -216,10 +216,17 @@ async function pollGoogleForm() {
         await exec("curl -k -L 'https://docs.google.com/spreadsheets/d/" + GOOGLE_SPREADSHEET_ID + "/export?exportFormat=csv' -o responses.csv");
         let rows = fs.readFileSync("responses.csv").toString().split("\n");
         let responses = [];
+        let fields = rows[0].split(",").filter(s => s.trim());
+        let magicIdx = 1;
+        let payloadIdx = 2;
+        if (fields[2].substring(0, 5) == "magic") {
+            magicIdx = 2;
+            payloadIdx = 1;
+        }
         for (let i = 1; i < rows.length; i++) {
             let fields = rows[i].split(",").filter(s => s.trim());
-            if (fields[1] == "magic") {
-                responses.push({"date":fields[0], "payload":fields[2]});
+            if (fields.length == 3 && fields[magicIdx] == "magic") {
+                responses.push({"date":fields[0], "payload":fields[payloadIdx]});
             }
         }
     
@@ -254,6 +261,8 @@ async function pollGoogleForm() {
                 console.log(exception);
             }
         }
+
+        // TODO: Accumulate all new stuff at the end of a logfile
         
         // Step 3: Wait a minute to try again
         sleep.sleep(60);

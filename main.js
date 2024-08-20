@@ -10,13 +10,17 @@ var sleep = require('sleep'); // npm install sleep
 const constants = JSON.parse(fs.readFileSync("config.json"));
 const CANVAS_API_KEY = constants["CANVAS_API_KEY"];
 const CANVAS_HOST = constants["CANVAS_HOST"];
-const CANVAS_STUDENTS = constants["CANVAS_STUDENTS"];
-const CANVAS_NETIDS = constants["CANVAS_NETIDS"];
 const PRIVATE_KEY = constants["PRIVATE_KEY"];
 const GOOGLE_SPREADSHEET_ID = constants["GOOGLE_SPREADSHEET_ID"];
 
-function printResp(resp) {
-    console.log(resp);
+function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
 }
 
 /**
@@ -84,16 +88,27 @@ function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheade
 }
 
 
-
-function base64ToArrayBuffer(base64) {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-}
+/**
+ * Return an object that converts from netid => canvasid
+ * @param {string} courseId ID of course from which to grab roster
+ * @returns {netid : canvasid}
+ */
+function getCanvasRosterConversions(courseId) {
+    return new Promise(resolve => {
+      httprequestCanvas(
+        "/api/v1/courses/"+courseId+"/enrollments?per_page=100&include[]=email", 443, "GET", "", {"Authorization": "Bearer " + APIKEY}, 
+        function(resp){
+          let netid2id = {};
+          for (let i = 0; i < resp.length; i++) {
+            if (!(resp[i].user.email === null)) {
+              netid2id[resp[i].user.email.split("@")[0]] = resp[i].user.id;
+            }
+          }
+          resolve(netid2id);
+        }
+      );      
+    })
+  }
 
 
 /**
@@ -150,78 +165,85 @@ async function decryptData(payload, privateKey) {
     return data;
 }
 
-
-async function processResponse(parsedjsonobj) {
-    // TODO: Finish this
-    let netid = parsedjsonobj['user'];
-    netid = netid.toLowerCase();
-    
+/**
+ * Post a submission from a particular payload to canvas
+ * @param {object} data Unencrypted payload sent down from a module
+ * @returns 
+ */
+async function processResponse(data) {   
     // Post to canvas
-    let studentfound = false;
-    
-    
-    if ('canvasasmtid' in parsedjsonobj) {
-        let asmtid = parsedjsonobj['canvasasmtid'];
-        asmtid = asmtid.split(',');
-        let canvaspoints = 2.0;
-        if ('canvaspoints' in parsedjsonobj) {
-            canvaspoints = parseFloat(parsedjsonobj['canvaspoints']);
-        }
-        else {
-            console.log("Warning: Requesting canvas post, but canvaspoints field was not supplied");
-        }
-        if ('canvashalfcredit' in parsedjsonobj) {
-            canvaspoints = canvaspoints / 2;
-        }
-        asmtidx = -1;
-        for (i = 0; i < CANVAS_STUDENTS.length; i++) { // for multiple sections
-            let user_id = ''; // find netid in this section of enrollments, or empty if not found
-            
-            for(canvasuserid in CANVAS_STUDENTS[i]) {
-                sisid = CANVAS_STUDENTS[i][canvasuserid];
-                
-                //console.log(sisid + " " + canvasuserid);
-                for(sisidkey in CANVAS_NETIDS) {
-                    //console.log("Checking " + sisidkey);
-                    if(sisid === sisidkey && CANVAS_NETIDS[sisidkey] === netid) {
-                        user_id = canvasuserid;
-                        asmtidx = i;
-                        //console.log("Found " + user_id);
-                        break;
-                    }
-                }
-                
-                if(user_id.length > 0 && asmtidx >= 0) {
-                    break;
-                }
-            }
-            
-            if (user_id.length > 0 && asmtidx >= 0) {
-                studentfound = true;
-                
-                try {
-                    let gradeurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/update_grades?grade_data["+user_id+"][posted_grade]="+canvaspoints;
-                    console.log("Posting assignment " + asmtid[asmtidx] + " to canvas for student " + netid + " (" + user_id + ") at " + gradeurl);
-                    httprequestCanvas(gradeurl, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
-    
-                    sleep.sleep(5);
-    
-                    let missingurl = "/api/v1/courses/"+CANVAS_COURSE_ID[i]+"/assignments/" + asmtid[asmtidx] + "/submissions/" + user_id;
-                    console.log("Clearing missing status, if any: " + missingurl);
-                    let missingbody = { "submission": { "late_policy_status": "none", "missing": false, "workflow_state": "submitted", "read_status": "read" } }; 
-                    httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, printResp);
-                } catch(err) {
-                    console.log("Error Posting to Canvas: " + err.message);
-                }
-            } else {
-                console.log("Warning: Student not found in canvas mapping " + netid + " in section " + i);
-            }
+    if (!('courseId' in data)) {
+        console.log("Warning: Requesting canvas post, but courseId field was not supplied");
+        return;
+    }
+    if (!('asmtId' in data)) {
+        console.log("Warning: Requesting canvas post, but asmtId field was not supplied");
+        return;
+    }
+    if (!('points' in data)) {
+        console.log("Warning: Requesting canvas post, but points field was not supplied");
+        return;
+    }
+
+    // Step 1: Unpack all of the metadata needed to make this post
+    const netid = data['user'].toLowerCase();
+    const points = parseFloat(data['points']);
+    if ("halfcredit" in data && data.halfcredit) {
+        points = points/2;
+    }
+    // NOTE: Assuming assignment IDs are specified in parallel to course IDs
+    // for multiple sections
+    const courseIds = data['courseId'].split(",");
+    const asmtIds = data['asmtId'].split(",");
+
+    // Step 2: Look through all sections to obtain canvas user id from course id and netid
+    let userFound = false;
+    let userId = -1;
+    let courseId = -1;
+    let asmtId = -1;
+    for (let i = 0; i < courseId.length; i++) {
+        let netid2id = await getCanvasRosterConversions(courseId[i]);
+        if (netid in netid2id) {
+            userFound = true;
+            userId = netid2id[netid];
+            courseId = courseIds[i];
+            asmtId = asmtIds[i];
         }
     }
-    else {
-        console.log("Warning: Requesting canvas post, but canvasasmtid field was not supplied");
-    }
     
+    // Step 3: Make canvas requests
+    if (!userFound) {
+        console.log("Warning: Student not found in canvas mapping " + netid + " in courses " + courseId);
+        return;
+    }
+    try {
+        // Step 2a: Post score to canvas
+        let gradeurl = "/api/v1/courses/"+courseId+"/assignments/"+asmtId+"/submissions/update_grades?grade_data["+userId+"][posted_grade]="+points;
+        console.log("Posting assignment " + asmtId + " to canvas for student " + netid + " (" + userId + ") at " + gradeurl);
+        await new Promise(resolve => {
+            httprequestCanvas(gradeurl, 443, "POST", {}, {"Authorization": "Bearer " + CANVAS_API_KEY}, function(response) {
+                console.log(response);
+                resolve();
+            });
+        })
+
+        sleep.sleep(5);
+
+        // Step 2b: Clear missing status
+        let missingurl = "/api/v1/courses/"+courseId+"/assignments/"+asmtId+"/submissions/"+userId;
+        console.log("Clearing missing status, if any: " + missingurl);
+        let missingbody = { "submission": { "late_policy_status": "none", "missing": false, "workflow_state": "submitted", "read_status": "read" } }; 
+        await new Promise(resolve => {
+            httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, function(response) {
+                console.log(response);
+                resolve();
+            });
+        })
+
+    } catch(err) {
+        console.log("Error Posting to Canvas: " + err.message);
+    }
+
     res.end('ok (input below)\n\n' + unpackedjson);
 }
 
@@ -269,7 +291,7 @@ async function pollGoogleForm() {
             try {
                 let data = await decryptData(responses[i].payload, PRIVATE_KEY);
                 console.log(responses[i].date, data);
-                //processResponse(data);
+                processResponse(data);
             }
             catch (exception) {
                 console.log("Failure on", responses[i].date);

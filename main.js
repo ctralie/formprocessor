@@ -104,6 +104,7 @@ function base64ToArrayBuffer(base64) {
 async function decryptData(payload, privateKey) {
     let data = JSON.parse(Buffer.from(payload, 'base64').toString());
 
+    // Step 1: Decrypt aes key using RSA key
     const rsaDecrypt = new JSEncrypt();
     rsaDecrypt.setPrivateKey(privateKey);
     let aesKey = base64ToArrayBuffer(rsaDecrypt.decrypt(data.aesKey));
@@ -119,6 +120,7 @@ async function decryptData(payload, privateKey) {
         ['encrypt', 'decrypt']
     );
 
+    // Step 2: Decrypt files using AES key
     for (let i = 0; i < data.files.length; i++) {
         let file = await crypto.subtle.decrypt(
             {
@@ -132,6 +134,19 @@ async function decryptData(payload, privateKey) {
         let decoder = new TextDecoder();
         data.files[i].content = decoder.decode(file);
     }
+
+    // Step 3: Decrypt the username using AES key
+    let user = await crypto.subtle.decrypt(
+        {
+            name: 'AES-CBC',
+            iv: base64ToArrayBuffer(data.iv),
+        },
+        aesKey,
+        base64ToArrayBuffer(data.user)
+    );
+    let decoder = new TextDecoder();
+    data.user = decoder.decode(user);
+
     return data;
 }
 
@@ -225,7 +240,7 @@ async function pollGoogleForm() {
         }
         for (let i = 1; i < rows.length; i++) {
             let fields = rows[i].split(",").filter(s => s.trim());
-            if (fields.length == 3 && fields[magicIdx] == "magic") {
+            if (fields.length == 3 && fields[magicIdx].substring(0, 5) == "magic") {
                 responses.push({"date":fields[0], "payload":fields[payloadIdx]});
             }
         }

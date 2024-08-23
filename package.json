@@ -10,8 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "googleapis": "^39.2.0",
-    "node-jsencrypt": "^1.0.0",
-    "sleep": "^6.3.0"
+    "googleapis": "^142.0.0",
+    "node-jsencrypt": "^1.0.0"
   }
 }

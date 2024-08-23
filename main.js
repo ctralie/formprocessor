@@ -1,10 +1,10 @@
 const https = require('https');
 const fs = require('fs');
 const JSEncrypt = require('node-jsencrypt');
-const crypto = require('crypto').webcrypto;
+const crypto = require('crypto');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
-var sleep = require('sleep'); // npm install sleep
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Load in constants
 const constants = JSON.parse(fs.readFileSync("config.json"));
@@ -12,16 +12,6 @@ const CANVAS_API_KEY = constants["CANVAS_API_KEY"];
 const CANVAS_HOST = constants["CANVAS_HOST"];
 const PRIVATE_KEY = constants["PRIVATE_KEY"];
 const GOOGLE_SPREADSHEET_ID = constants["GOOGLE_SPREADSHEET_ID"];
-
-function base64ToArrayBuffer(base64) {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-}
 
 /**
  * An http request handler for Canvas, implemented with help from
@@ -110,6 +100,9 @@ function getCanvasRosterConversions(courseId) {
     })
   }
 
+function base64ToBuffer(base64) {
+    return Buffer.from(base64, 'base64');
+}
 
 /**
  * 
@@ -117,50 +110,38 @@ function getCanvasRosterConversions(courseId) {
  * @param {string} privateKey Private key string
  */
 async function decryptData(payload, privateKey) {
-    let data = JSON.parse(Buffer.from(payload, 'base64').toString());
+    let data = JSON.parse(base64ToBuffer(payload).toString());
 
-    // Step 1: Decrypt aes key using RSA key
+    // Step 1: Decrypt AES key using RSA key
     const rsaDecrypt = new JSEncrypt();
     rsaDecrypt.setPrivateKey(privateKey);
-    let aesKey = base64ToArrayBuffer(rsaDecrypt.decrypt(data.aesKey));
-
-    aesKey = await crypto.subtle.importKey(
-        "raw", 
-        aesKey,
-        {
-            name: 'AES-CBC',
-            length: 256,
-        },
-        true,
-        ['encrypt', 'decrypt']
-    );
+    let aesKeyBuffer = base64ToBuffer(rsaDecrypt.decrypt(data.aesKey));
 
     // Step 2: Decrypt files using AES key
     for (let i = 0; i < data.files.length; i++) {
-        let file = await crypto.subtle.decrypt(
-            {
-                name: 'AES-CBC',
-                iv: base64ToArrayBuffer(data.iv),
-            },
-            aesKey,
-            base64ToArrayBuffer(data.files[i].content)
-        );
-    
-        let decoder = new TextDecoder();
-        data.files[i].content = decoder.decode(file);
+        let fileBuffer = base64ToBuffer(data.files[i].content);
+        let ivBuffer = base64ToBuffer(data.iv);
+
+        let decipher = crypto.createDecipheriv('aes-256-cbc', aesKeyBuffer, ivBuffer);
+        let decrypted = Buffer.concat([
+            decipher.update(fileBuffer),
+            decipher.final()
+        ]);
+
+        data.files[i].content = decrypted.toString('utf-8');
     }
 
     // Step 3: Decrypt the username using AES key
-    let user = await crypto.subtle.decrypt(
-        {
-            name: 'AES-CBC',
-            iv: base64ToArrayBuffer(data.iv),
-        },
-        aesKey,
-        base64ToArrayBuffer(data.user)
-    );
-    let decoder = new TextDecoder();
-    data.user = decoder.decode(user);
+    let userBuffer = base64ToBuffer(data.user);
+    let ivBuffer = base64ToBuffer(data.iv);
+
+    let decipher = crypto.createDecipheriv('aes-256-cbc', aesKeyBuffer, ivBuffer);
+    let decryptedUser = Buffer.concat([
+        decipher.update(userBuffer),
+        decipher.final()
+    ]);
+
+    data.user = decryptedUser.toString('utf-8');
 
     return data;
 }
@@ -228,7 +209,7 @@ async function processResponse(data) {
             });
         })
 
-        sleep.sleep(5);
+        await sleep(5000);
 
         // Step 2b: Clear missing status
         let missingurl = "/api/v1/courses/"+courseId+"/assignments/"+asmtId+"/submissions/"+userId;
@@ -322,7 +303,7 @@ async function pollGoogleForm() {
 
         
         // Step 3: Wait a minute to try again
-        sleep.sleep(60);
+        await sleep(60000);
     }
 }
 

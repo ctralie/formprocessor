@@ -298,8 +298,10 @@ async function pollGoogleForm() {
             responses[i].success = success;
             fs.appendFileSync("allData.txt", JSON.stringify(responses[i]) + "\n");
         }
-        lastDate = responses[responses.length-1].date;
-        fs.writeFileSync("lastDate.txt", lastDate);
+        if (responses.length > 0) {
+            lastDate = responses[responses.length-1].date;
+            fs.writeFileSync("lastDate.txt", lastDate);
+        }
 
         
         // Step 3: Wait a minute to try again

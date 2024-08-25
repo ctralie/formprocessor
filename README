@@ -8,9 +8,20 @@ formResponse?submit=Submit
 5) Change spreadsheet sharing so that anyone with a link can be a viewer  
 6) Take note of the spreadsheet ID, put in config file for backend  
 
-## config.json Constants
+
+## Running main.js
+
+curl is required, as well as node and nmp
+
+To get started, type
+~~~~~ bash
+npm install .
+~~~~~
+
+Then, create a file <code>config.json</code> with the following constants
 
 CANVAS_API_KEY  
 CANVAS_HOST  
 PRIVATE_KEY  
 GOOGLE_SPREADSHEET_ID  
+

@@ -279,14 +279,23 @@ async function pollGoogleForm() {
         for (let i = startIdx; i < responses.length; i++) {
             let success = false;
             let user = "";
+            let data = null;
             try {
-                let data = await decryptData(responses[i].payload, PRIVATE_KEY);
+                data = await decryptData(responses[i].payload, PRIVATE_KEY);
+            }
+            catch (exception) {
+                console.log("Error decrypting data!  (Check your public/private key pairs?");
+                console.log(exception);
+            }
+            try{
                 success = await processResponse(data);
                 user = data.user;
             }
             catch (exception) {
+                console.log("Error processing response!");
                 console.log(exception);
             }
+
             if (success) {
                 console.log("Success for", user, "on", responses[i].date, "!");
             }

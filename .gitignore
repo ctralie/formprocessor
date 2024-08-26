@@ -9,3 +9,6 @@ keys
 config.json
 netidgenerator.xlsx
 *.zip
+lastDate.txt
+allData.txt
+responses.csv

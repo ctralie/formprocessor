@@ -1,10 +1,14 @@
 const https = require('https');
-const fs = require('fs');
+const fs = require('fs-extra');
 const JSEncrypt = require('node-jsencrypt');
 const crypto = require('crypto');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const JSZip = require('jszip');
+const path = require('path');
+const FormData = require('form-data');
+const url = require('url');
 
 // Load in constants
 const constants = JSON.parse(fs.readFileSync("config.json"));
@@ -25,12 +29,13 @@ const GOOGLE_SPREADSHEET_ID = constants["GOOGLE_SPREADSHEET_ID"];
  * @param {function} nextstep A function to execute on the response object once this request is complete
  */
 function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheaders={}, nextstep=null) {
-
-    body = JSON.stringify(body)
+    if(!('Content-Type' in bodyheaders)) {
+        body = JSON.stringify(body)
+    }
 
     var reqheaders = {}
 
-    if(body.length > 0) {
+    if(body.length > 0 && !('Content-Type' in bodyheaders) && !('Content-Length' in bodyheaders)) {
         reqheaders['Content-Type'] = 'application/json';
         reqheaders['Content-Length'] = body.length;    
     }
@@ -46,11 +51,13 @@ function httprequestCanvas(path="/", port=443, method="POST", body="", bodyheade
         method: method,
         headers: reqheaders
     }
+    
+    console.log(`Making HTTP request: ${JSON.stringify(options)}"`);
 
     var resp = "";
 
     const req = https.request(options, (res) => {
-        console.log(`statusCode: ${res.statusCode}`)
+        console.log(`statusCode: ${res.statusCode}`);
 
         res.on('data', (d) => {
             resp += d.toString();
@@ -102,6 +109,40 @@ function getCanvasRosterConversions(courseId) {
 
 function base64ToBuffer(base64) {
     return Buffer.from(base64, 'base64');
+}
+
+/**
+ * Creates a ZIP file from the provided data object.
+ *
+ * @param {Object} data - The data object containing files information.
+ * @param {Array} data.files - An array of file objects.
+ * @param {string} data.files[].name - The relative path and name of the file within the ZIP.
+ * @param {string|Buffer} data.files[].content - The content of the file.
+ * @param {string} outputPath - The path where the ZIP file will be saved.
+ * @returns {string} - The base64 encoded zip file
+ */
+async function zipPayloadFiles(data) {
+    try {
+        if (!data || !Array.isArray(data.files)) {
+            throw new Error('Invalid data format. Expected an object with a files array.');
+        }
+
+        const zip = new JSZip();
+
+        data.files.forEach(file => {
+            if (!file.name || file.content === undefined) {
+                throw new Error('Each file must have a name and content.');
+            }
+            zip.file(file.name, file.content);
+        });
+        
+        const zipContent = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+        return zipContent.toString('base64');
+    } catch (error) {
+        console.error('Error creating ZIP file:', error.message);
+        throw error;
+    }
 }
 
 /**
@@ -199,7 +240,7 @@ async function processResponse(data) {
         return false;
     }
     try {
-        // Step 2a: Post score to canvas
+        // Step 3a: Post score to canvas
         let gradeurl = "/api/v1/courses/"+courseId+"/assignments/"+asmtId+"/submissions/update_grades?grade_data["+userId+"][posted_grade]="+points;
         console.log("Posting assignment " + asmtId + " to canvas for student " + netid + " (" + userId + ") at " + gradeurl);
         await new Promise(resolve => {
@@ -210,17 +251,87 @@ async function processResponse(data) {
         })
 
         await sleep(5000);
+        
+        // Step 3b: Upload the student submission to our files section, and link it to the student's submission
+        console.log("Requesting upload URL to course files section");
+        
+        let uploadurl = "/api/v1/courses/" + courseId + "/assignments/" + asmtId + "/submissions/" + userId + "/comments/files";
+        let zipFileContentsBase64 = await zipPayloadFiles(data); 
+        let zipFileName = "exercise-" + asmtId + "-" + userId + ".zip";
 
-        // Step 2b: Clear missing status
-        let missingurl = "/api/v1/courses/"+courseId+"/assignments/"+asmtId+"/submissions/"+userId;
-        console.log("Clearing missing status, if any: " + missingurl);
-        let missingbody = { "submission": { "late_policy_status": "none", "missing": false, "workflow_state": "submitted", "read_status": "read" } }; 
-        await new Promise(resolve => {
-            httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, function(response) {
+        const form = new FormData();
+        form.append('name', zipFileName);
+        form.append('content_type', 'application/zip');
+
+        const uploadResponse = await new Promise(resolve => {
+            httprequestCanvas(uploadurl, 443, "POST", form, {"Authorization": "Bearer " + CANVAS_API_KEY, ...form.getHeaders(), 'Content-Type': 'multipart/form-data'}, function(response) {
                 console.log(response);
-                resolve();
+                resolve(response);
             });
-        })
+        });
+
+        const { upload_url, upload_params } = uploadResponse;
+
+        console.log("Uploading zip file to course files section");
+        
+        let parsedUrl = url.parse(upload_url);
+        let zipFileContents = Buffer.from(zipFileContentsBase64, 'base64');
+        
+        const zipUploadForm = new FormData();
+        zipUploadForm.append('file', zipFileContents, {
+            filename: zipFileName,
+            contentType: 'application/zip'
+        });
+        
+        let uploadOptions = {}
+        uploadOptions['headers'] = zipUploadForm.getHeaders();
+    
+        for(var key in upload_params) {
+            uploadOptions['headers'][key] = upload_params[key];
+        }        
+        
+        uploadOptions['hostname'] = parsedUrl.hostname;
+        uploadOptions['port'] = parsedUrl.port || 443;
+        uploadOptions['path'] = parsedUrl.path;
+        uploadOptions['method'] = "POST";
+        uploadOptions['headers']['filename'] = zipFileName;
+        uploadOptions['headers']['Authorization'] = 'Bearer ' + CANVAS_API_KEY;
+
+        const req = https.request(uploadOptions, (res) => {
+            let responseData = '';
+
+            res.on('data', (chunk) => {
+                responseData += chunk;
+            });
+
+            res.on('end', () => {
+                console.log('Upload Response:', responseData);
+                
+                let responseDataJson = JSON.parse(responseData);
+                
+                let uploadFileId = responseDataJson.id;
+                
+                // Step 3c: Clear missing status and attach comment
+                console.log("Clearing missing status, if any, and attaching submission comment");
+                
+                let missingurl = "/api/v1/courses/"+courseId+"/assignments/"+asmtId+"/submissions/"+userId;
+                let missingbody = { "submission": { "late_policy_status": "none", "missing": false, "workflow_state": "submitted", "read_status": "read"}, "comment": { "file_ids": [uploadFileId] } }; 
+                httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, function(response) {
+                    console.log(response);
+                });
+            });
+        });
+
+        req.on('error', (error) => {
+            console.error('Error during file upload:', error.message);
+        });
+        
+        zipUploadForm.pipe(req);
+        
+        req.end();
+
+        await sleep(5000);
+                
         success = true;
     } catch(err) {
         console.log("Error Posting to Canvas: " + err.message);

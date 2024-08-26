@@ -10,8 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "form-data": "^4.0.0",
+    "fs-extra": "^11.2.0",
     "googleapis": "^142.0.0",
     "jsencrypt": "^3.3.2",
-    "node-jsencrypt": "^1.0.0"
+    "jszip": "^3.10.1",
+    "node-jsencrypt": "^1.0.0",
+    "url": "^0.11.4"
   }
 }

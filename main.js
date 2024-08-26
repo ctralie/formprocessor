@@ -209,8 +209,8 @@ async function processResponse(data) {
     }
 
     // Step 1: Unpack all of the metadata needed to make this post
-    const netid = data['user'].toLowerCase();
-    const points = parseFloat(data['points']);
+    const netid = data['user'].toLowerCase().split("@")[0];
+    let points = parseFloat(data['points']);
     if ("halfcredit" in data && data.halfcredit) {
         points = points/2;
     }
@@ -409,10 +409,10 @@ async function pollGoogleForm() {
             }
 
             if (success) {
-                console.log("Success for", user, "on", responses[i].date, "!");
+                console.log("Success for", user, "on", responses[i].date, "for", data['courseId'], ",", data["asmtId"], "!");
             }
             else {
-                console.log("Failure on", responses[i].date);
+                console.log("Failure for", user, "on", responses[i].date, "for", data['courseId'], ",", data["asmtId"], "!");
             }
             // Append this to "allData.txt" no matter what just in case there's a problem
             // and we need to go back

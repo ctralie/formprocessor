@@ -319,6 +319,8 @@ async function processResponse(data) {
                 httprequestCanvas(missingurl, 443, "PUT", missingbody, {"Authorization": "Bearer " + CANVAS_API_KEY}, function(response) {
                     console.log(response);
                 });
+                
+                success = true;
             });
         });
 
@@ -332,8 +334,6 @@ async function processResponse(data) {
         req.end();
 
         await sleep(5000);
-                
-        success = true;
     } catch(err) {
         console.log("Error Posting to Canvas: " + err.message);
         success = false;

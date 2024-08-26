@@ -324,6 +324,7 @@ async function processResponse(data) {
 
         req.on('error', (error) => {
             console.error('Error during file upload:', error.message);
+            success = false;
         });
         
         zipUploadForm.pipe(req);

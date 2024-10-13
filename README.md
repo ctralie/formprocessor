@@ -1,3 +1,7 @@
+# Ursinus WebIDE LMS Form Processor
+
+This program enables automatic polling of a Google spreadsheet for new, encrypted student submissions to the Ursinus WebIDE.  For each new submission that it finds, it decrypts the submission, and posts the appropriate grade and submission text to your LMS for future reference.  This approach makes use of free tools including Google sheets, so that no server infrastructure is required to make use of this system.
+
 ## Getting Started
 
 1) Go to [https://docs.google.com/forms/](https://docs.google.com/forms/)

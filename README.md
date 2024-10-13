@@ -10,7 +10,7 @@ Make a google form with the fields "magic" (short answer) and "payload" (paragra
 6) Take note of the spreadsheet ID, put in config file for backend  
 
 
-## Running main.js
+## Configuring the Form Processor to Post Grades to your LMS
 
 `curl` is required, as well as `node` and `npm`
 
@@ -24,5 +24,9 @@ Then, create a file <code>config.json</code> with the following constants set:
 * `CANVAS_API_KEY` - your Canvas API key for posting grades to your LMS from the student submissions on the Google spreadsheet
 * `CANVAS_HOST` - the URL of your Canvas LMS (i.e., `your-institution.instructure.com`
 * `PRIVATE_KEY` - the private key that goes with your RSA public key that you set on the WebIDE for encrypting/decrypting student submissions to the Google spreadsheet
-* `GOOGLE_SPREADSHEET_ID` - your Google spreadsheet ID noted from above  
+* `GOOGLE_SPREADSHEET_ID` - your Google spreadsheet ID noted from above
+
+### Executing main.js
+
+`main.js` can be run in daemon mode so that it runs in the background and periodically polls the Google spreadsheet for new submissions.  You can execute this via `run.sh`
 

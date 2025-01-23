@@ -364,12 +364,22 @@ async function processResponse(data) {
  */
 async function pollGoogleForm() {
     while (true) {
-        await exec("curl -k -L 'https://docs.google.com/spreadsheets/d/" + GOOGLE_SPREADSHEET_ID + "/export?exportFormat=csv' -o responses.csv");
-        let rows = fs.readFileSync("responses.csv").toString().split("\n");
         let responses = [];
-        let fields = rows[0].split(",").filter(s => s.trim());
+        let fields = [];
+        let rows = [];
         let magicIdx = 1;
         let payloadIdx = 2;
+        do {
+            await exec("curl -k -L 'https://docs.google.com/spreadsheets/d/" + GOOGLE_SPREADSHEET_ID + "/export?exportFormat=csv' -o responses.csv");
+            rows = fs.readFileSync("responses.csv").toString().split("\n");
+            fields = rows[0].split(",").filter(s => s.trim());
+            if (fields[2] === undefined) {
+                console.log("ERROR: Badly formed responses.csv; trying again in 30 seconds");
+                await sleep(30000);
+            }
+        }
+        while(fields[2] === undefined);
+
         if (fields[2].substring(0, 5) == "magic") {
             magicIdx = 2;
             payloadIdx = 1;
